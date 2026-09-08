@@ -27,6 +27,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // 3. Register Application Services
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddHttpClient<IWeatherService, WeatherService>();
+
+// Member 1 Service Registrations
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IDestinationService, DestinationService>();
+builder.Services.AddScoped<ILocalGuideService, LocalGuideService>();
+builder.Services.AddScoped<IExperienceService, ExperienceService>();
 
 // 4. Configure JWT Authentication
 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") 
