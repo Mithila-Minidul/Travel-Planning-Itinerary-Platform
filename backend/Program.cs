@@ -19,10 +19,14 @@ var dbName = Environment.GetEnvironmentVariable("DB_NAME") ?? "travel_agentic_db
 var dbUser = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
 var dbPass = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "postgres";
 
-var connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass};SSL Mode=Require;Trust Server Certificate=true;Pooling=true;";
+var connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass};SSL Mode=Require;Trust Server Certificate=true;Pooling=true;Timeout=30;Command Timeout=60;Keepalive=30;";
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorCodesToAdd: null)));
 
 // 3. Register Application Services
 builder.Services.AddScoped<ITokenService, TokenService>();

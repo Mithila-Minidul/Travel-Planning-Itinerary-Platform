@@ -217,6 +217,19 @@ namespace Backend.Services
             return list.Select(e => MapToDto(e, DateTime.UtcNow));
         }
 
+        public async Task<IEnumerable<ExperienceResponseDto>> GetByGuideAsync(Guid guideId)
+        {
+            var list = await _context.Experiences
+                .Include(e => e.Guide).ThenInclude(g => g.User)
+                .Include(e => e.Destination)
+                .Include(e => e.Category)
+                .Where(e => e.GuideId == guideId)
+                .OrderByDescending(e => e.CreatedAt)
+                .ToListAsync();
+
+            return list.Select(e => MapToDto(e, DateTime.UtcNow));
+        }
+
         public async Task<IEnumerable<ExperienceResponseDto>> GetPendingApprovalAsync()
         {
             var list = await _context.Experiences
@@ -224,6 +237,21 @@ namespace Backend.Services
                 .Include(e => e.Destination)
                 .Include(e => e.Category)
                 .Where(e => e.Status == ExperienceStatus.PendingApproval)
+                .ToListAsync();
+
+            return list.Select(e => MapToDto(e, DateTime.UtcNow));
+        }
+
+        public async Task<IEnumerable<ExperienceResponseDto>> GetForAdminAsync()
+        {
+            var list = await _context.Experiences
+                .Include(e => e.Guide).ThenInclude(g => g.User)
+                .Include(e => e.Destination)
+                .Include(e => e.Category)
+                .Where(e => e.Status == ExperienceStatus.Approved ||
+                            e.Status == ExperienceStatus.PendingApproval ||
+                            e.Status == ExperienceStatus.Rejected)
+                .OrderByDescending(e => e.CreatedAt)
                 .ToListAsync();
 
             return list.Select(e => MapToDto(e, DateTime.UtcNow));
@@ -260,7 +288,10 @@ namespace Backend.Services
                 DurationHours = dto.DurationHours,
                 MaxCapacity = dto.MaxCapacity,
                 MeetingPoint = dto.MeetingPoint,
-                CoverImageUrl = dto.CoverImageUrl,
+                CoverImageUrl = dto.ImageUrls.ElementAtOrDefault(0) ?? dto.CoverImageUrl,
+                Image2Url = dto.ImageUrls.ElementAtOrDefault(1),
+                Image3Url = dto.ImageUrls.ElementAtOrDefault(2),
+                Image4Url = dto.ImageUrls.ElementAtOrDefault(3),
                 Status = ExperienceStatus.PendingApproval, // Admin must approve
                 IsDynamicPricingEnabled = dto.IsDynamicPricingEnabled,
                 WeekendMultiplier = dto.WeekendMultiplier,
@@ -270,6 +301,74 @@ namespace Backend.Services
             _context.Experiences.Add(exp);
             await _context.SaveChangesAsync();
             return await GetByIdAsync(exp.Id);
+        }
+
+        public async Task<ExperienceResponseDto> UpdateAsync(Guid guideId, Guid id, ExperienceCreateDto dto)
+        {
+            var exp = await _context.Experiences.FirstOrDefaultAsync(e => e.Id == id && e.GuideId == guideId);
+            if (exp == null) throw new KeyNotFoundException("Experience not found.");
+
+            exp.DestinationId = dto.DestinationId;
+            exp.CategoryId = dto.CategoryId;
+            exp.Title = dto.Title;
+            exp.Description = dto.Description;
+            exp.BasePrice = dto.BasePrice;
+            exp.DurationHours = dto.DurationHours;
+            exp.MaxCapacity = dto.MaxCapacity;
+            exp.MeetingPoint = dto.MeetingPoint;
+            exp.CoverImageUrl = dto.ImageUrls.ElementAtOrDefault(0) ?? dto.CoverImageUrl;
+            exp.Image2Url = dto.ImageUrls.ElementAtOrDefault(1);
+            exp.Image3Url = dto.ImageUrls.ElementAtOrDefault(2);
+            exp.Image4Url = dto.ImageUrls.ElementAtOrDefault(3);
+            exp.IsDynamicPricingEnabled = dto.IsDynamicPricingEnabled;
+            exp.WeekendMultiplier = dto.WeekendMultiplier;
+            exp.PeakSeasonMultiplier = dto.PeakSeasonMultiplier;
+            exp.Status = ExperienceStatus.PendingApproval;
+
+            await _context.SaveChangesAsync();
+            return await GetByIdAsync(exp.Id);
+        }
+
+        public async Task<ExperienceResponseDto> UpdateByAdminAsync(Guid id, ExperienceCreateDto dto)
+        {
+            var exp = await _context.Experiences.FirstOrDefaultAsync(e => e.Id == id);
+            if (exp == null) throw new KeyNotFoundException("Experience not found.");
+            if (exp.Status == ExperienceStatus.PendingApproval)
+            {
+                throw new InvalidOperationException("Pending experiences must be approved or declined before editing.");
+            }
+
+            exp.DestinationId = dto.DestinationId;
+            exp.CategoryId = dto.CategoryId;
+            exp.Title = dto.Title;
+            exp.Description = dto.Description;
+            exp.BasePrice = dto.BasePrice;
+            exp.DurationHours = dto.DurationHours;
+            exp.MaxCapacity = dto.MaxCapacity;
+            exp.MeetingPoint = dto.MeetingPoint;
+            exp.CoverImageUrl = dto.ImageUrls.ElementAtOrDefault(0) ?? dto.CoverImageUrl;
+            exp.Image2Url = dto.ImageUrls.ElementAtOrDefault(1);
+            exp.Image3Url = dto.ImageUrls.ElementAtOrDefault(2);
+            exp.Image4Url = dto.ImageUrls.ElementAtOrDefault(3);
+            exp.IsDynamicPricingEnabled = dto.IsDynamicPricingEnabled;
+            exp.WeekendMultiplier = dto.WeekendMultiplier;
+            exp.PeakSeasonMultiplier = dto.PeakSeasonMultiplier;
+
+            await _context.SaveChangesAsync();
+            return await GetByIdAsync(exp.Id);
+        }
+
+        public async Task DeleteByAdminAsync(Guid id)
+        {
+            var exp = await _context.Experiences.FirstOrDefaultAsync(e => e.Id == id);
+            if (exp == null) throw new KeyNotFoundException("Experience not found.");
+            if (exp.Status == ExperienceStatus.PendingApproval)
+            {
+                throw new InvalidOperationException("Pending experiences must be approved or declined before deletion.");
+            }
+
+            _context.Experiences.Remove(exp);
+            await _context.SaveChangesAsync();
         }
 
         public async Task<ExperienceResponseDto> UpdateStatusAsync(Guid id, ExperienceStatus status)
@@ -391,6 +490,9 @@ namespace Backend.Services
                 MaxCapacity = e.MaxCapacity,
                 MeetingPoint = e.MeetingPoint,
                 CoverImageUrl = e.CoverImageUrl,
+                ImageUrls = new[] { e.CoverImageUrl, e.Image2Url, e.Image3Url, e.Image4Url }
+                    .Where(image => !string.IsNullOrWhiteSpace(image))
+                    .ToList(),
                 Status = e.Status.ToString(),
                 Rating = e.Rating,
                 TotalBookingsCount = e.TotalBookingsCount

@@ -30,9 +30,14 @@ namespace Backend.Interfaces
     public interface IExperienceService
     {
         Task<IEnumerable<ExperienceResponseDto>> GetAllApprovedAsync(Guid? destinationId = null, Guid? categoryId = null);
+        Task<IEnumerable<ExperienceResponseDto>> GetByGuideAsync(Guid guideId);
         Task<IEnumerable<ExperienceResponseDto>> GetPendingApprovalAsync();
+        Task<IEnumerable<ExperienceResponseDto>> GetForAdminAsync();
         Task<ExperienceResponseDto> GetByIdAsync(Guid id, DateTime? targetDate = null);
         Task<ExperienceResponseDto> CreateAsync(Guid guideId, ExperienceCreateDto dto);
+        Task<ExperienceResponseDto> UpdateAsync(Guid guideId, Guid id, ExperienceCreateDto dto);
+        Task<ExperienceResponseDto> UpdateByAdminAsync(Guid id, ExperienceCreateDto dto);
+        Task DeleteByAdminAsync(Guid id);
         Task<ExperienceResponseDto> UpdateStatusAsync(Guid id, ExperienceStatus status);
         Task<DynamicPriceCalculationDto> CalculatePriceAsync(Guid experienceId, DateTime targetDate);
         Task<IEnumerable<ExperienceResponseDto>> SearchForResearchAgentAsync(AgentExperienceSearchQueryDto query);

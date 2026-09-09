@@ -59,6 +59,11 @@ function App() {
                 <ExperienceForm />
               </ProtectedRoute>
             } />
+            <Route path="/experiences/:id/edit" element={
+              <ProtectedRoute allowedRoles={['Admin', 'LocalGuide']}>
+                <ExperienceForm />
+              </ProtectedRoute>
+            } />
             <Route path="/categories" element={
               <ProtectedRoute allowedRoles={['Admin']}>
                 <CategoriesPage />

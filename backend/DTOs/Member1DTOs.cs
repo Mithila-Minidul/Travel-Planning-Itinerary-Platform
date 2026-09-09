@@ -97,19 +97,20 @@ namespace Backend.DTOs
         [Required, MaxLength(3000)]
         public string Description { get; set; } = string.Empty;
 
-        [Required, Range(1, 10000)]
+        [Required, Range(1, 1000)]
         public decimal BasePrice { get; set; }
 
-        [Required, Range(1, 48)]
+        [Required, Range(1, 168)]
         public int DurationHours { get; set; }
 
-        [Required, Range(1, 100)]
+        [Required, Range(1, 50)]
         public int MaxCapacity { get; set; }
 
         [MaxLength(500)]
         public string MeetingPoint { get; set; } = string.Empty;
 
         public string? CoverImageUrl { get; set; }
+        public List<string?> ImageUrls { get; set; } = new();
         public bool IsDynamicPricingEnabled { get; set; } = true;
         public decimal WeekendMultiplier { get; set; } = 1.15m;
         public decimal PeakSeasonMultiplier { get; set; } = 1.25m;
@@ -132,6 +133,7 @@ namespace Backend.DTOs
         public int MaxCapacity { get; set; }
         public string MeetingPoint { get; set; } = string.Empty;
         public string? CoverImageUrl { get; set; }
+        public List<string?> ImageUrls { get; set; } = new();
         public string Status { get; set; } = string.Empty;
         public decimal Rating { get; set; }
         public int TotalBookingsCount { get; set; }

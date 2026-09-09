@@ -35,6 +35,10 @@ namespace Backend.Models
 
         public string? CoverImageUrl { get; set; }
 
+        public string? Image2Url { get; set; }
+        public string? Image3Url { get; set; }
+        public string? Image4Url { get; set; }
+
         public ExperienceStatus Status { get; set; } = ExperienceStatus.PendingApproval;
 
         public bool IsDynamicPricingEnabled { get; set; } = true;

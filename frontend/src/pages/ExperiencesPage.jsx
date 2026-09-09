@@ -3,10 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { experienceAPI } from '../api/experiences';
 import { categoryAPI } from '../api/categories';
 import { useAuth } from '../context/AuthContext';
-import { Add, Edit, Delete, Visibility } from '@mui/icons-material';
+import {
+  Add,
+  Edit,
+  Delete,
+  LocationOn,
+  Schedule,
+  People,
+  Place,
+  ArrowBackIos,
+  ArrowForwardIos,
+} from '@mui/icons-material';
+import toast from 'react-hot-toast';
 
 const ExperiencesPage = () => {
   const [experiences, setExperiences] = useState([]);
+  const [imageIndexes, setImageIndexes] = useState({});
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const { isAdmin, isLocalGuide } = useAuth();
@@ -14,14 +26,13 @@ const ExperiencesPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [isAdmin]);
 
   const fetchData = async () => {
     try {
-      const [expRes, catRes] = await Promise.all([
-        experienceAPI.getAll(),
-        categoryAPI.getAll()
-      ]);
+      const requests = [isAdmin ? experienceAPI.getForAdmin() : experienceAPI.getAll(), categoryAPI.getAll()];
+
+      const [expRes, catRes] = await Promise.all(requests);
       setExperiences(expRes.data || []);
       setCategories(catRes.data || []);
     } catch (error) {
@@ -29,6 +40,45 @@ const ExperiencesPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateExperienceStatus = async (id, status) => {
+    try {
+      await experienceAPI.updateStatus(id, status);
+      setExperiences((current) => current.map((experience) => (
+        experience.id === id ? { ...experience, status } : experience
+      )));
+    } catch (error) {
+      console.error('Error updating experience status:', error);
+    }
+  };
+
+  const deleteExperience = async (experience) => {
+    if (experience.status === 'PendingApproval') return;
+    if (!window.confirm(`Delete "${experience.title}"? This cannot be undone.`)) return;
+
+    try {
+      await experienceAPI.remove(experience.id);
+      setExperiences((current) => current.filter((item) => item.id !== experience.id));
+      toast.success('Experience deleted.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to delete experience.');
+    }
+  };
+
+  const getImages = (experience) => (experience.imageUrls?.length
+    ? experience.imageUrls
+    : [experience.coverImageUrl]
+  ).filter(Boolean);
+
+  const moveCardImage = (experienceId, imageCount, direction) => {
+    setImageIndexes((current) => {
+      const currentIndex = current[experienceId] || 0;
+      return {
+        ...current,
+        [experienceId]: (currentIndex + direction + imageCount) % imageCount,
+      };
+    });
   };
 
   if (loading) {
@@ -54,43 +104,112 @@ const ExperiencesPage = () => {
           <p className="text-gray-500">No experiences found. Add your first experience!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {experiences.map((exp) => (
-            <div key={exp.id} className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition">
-              {exp.coverImageUrl && (
-                <img src={exp.coverImageUrl} alt={exp.title} className="w-full h-48 object-cover" />
-              )}
+            <article key={exp.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+              <div className="relative h-40 bg-slate-100">
+                {getImages(exp).length > 0 ? (
+                  <img
+                    src={getImages(exp)[imageIndexes[exp.id] || 0]}
+                    alt={exp.title}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-slate-400">No images</div>
+                )}
+                {getImages(exp).length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => moveCardImage(exp.id, getImages(exp).length, -1)}
+                      aria-label={`Previous image for ${exp.title}`}
+                      className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow transition hover:bg-black/75"
+                    >
+                      <ArrowBackIos sx={{ fontSize: 14, ml: '3px' }} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveCardImage(exp.id, getImages(exp).length, 1)}
+                      aria-label={`Next image for ${exp.title}`}
+                      className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow transition hover:bg-black/75"
+                    >
+                      <ArrowForwardIos sx={{ fontSize: 14 }} />
+                    </button>
+                    <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1 rounded-full bg-black/45 px-2 py-1">
+                      {getImages(exp).map((image, index) => (
+                        <span key={image} className={`h-1.5 w-1.5 rounded-full ${index === (imageIndexes[exp.id] || 0) ? 'bg-white' : 'bg-white/45'}`} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <div className="p-4">
-                <h3 className="font-semibold text-gray-800">{exp.title}</h3>
-                <p className="text-sm text-gray-500">{exp.destinationName}</p>
-                <div className="flex items-center gap-4 mt-2">
-                  <span className="text-indigo-600 font-bold">${exp.currentCalculatedPrice}</span>
-                  <span className="text-xs text-gray-500">{exp.durationHours}h</span>
-                  <span className={`px-2 py-0.5 text-xs rounded-full ${
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="mb-1 truncate text-[11px] font-semibold uppercase tracking-wide text-indigo-600">{exp.categoryName}</p>
+                    <h3 className="truncate font-bold text-slate-900">{exp.title}</h3>
+                    <p className="mt-1 flex items-center gap-1 truncate text-xs text-slate-500"><LocationOn fontSize="inherit" />{exp.destinationName}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                     exp.status === 'Approved' ? 'bg-green-100 text-green-700' :
                     exp.status === 'PendingApproval' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-gray-100 text-gray-700'
+                    exp.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
                   }`}>
-                    {exp.status}
+                    {exp.status === 'PendingApproval' ? 'Pending review' : exp.status}
                   </span>
                 </div>
+                <p className="mt-3 line-clamp-2 min-h-10 text-sm leading-5 text-slate-600">{exp.description}</p>
+                <p className="mt-2 truncate text-xs text-slate-500">Guide: {exp.guideName || 'Unknown guide'}</p>
+                <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-y border-slate-100 py-3 text-xs text-slate-600">
+                  <span className="flex items-center gap-1.5"><Schedule className="text-indigo-600" fontSize="small" />{exp.durationHours} hours</span>
+                  <span className="flex items-center gap-1.5"><People className="text-indigo-600" fontSize="small" />{exp.maxCapacity} guests</span>
+                  <span className="flex min-w-0 items-center gap-1.5"><Place className="shrink-0 text-indigo-600" fontSize="small" /><span className="truncate">{exp.meetingPoint || 'Flexible'}</span></span>
+                  <span className="font-bold text-indigo-700">${exp.currentCalculatedPrice}</span>
+                </div>
                 <div className="flex justify-end gap-2 mt-3">
-                  <button className="text-gray-400 hover:text-indigo-600">
-                    <Visibility fontSize="small" />
-                  </button>
                   {isAdmin && (
                     <>
-                      <button className="text-gray-400 hover:text-blue-600">
-                        <Edit fontSize="small" />
-                      </button>
-                      <button className="text-gray-400 hover:text-red-600">
-                        <Delete fontSize="small" />
-                      </button>
+                      {exp.status === 'PendingApproval' && (
+                        <>
+                          <button
+                            onClick={() => updateExperienceStatus(exp.id, 'Approved')}
+                            className="text-sm text-green-600 hover:text-green-800"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => updateExperienceStatus(exp.id, 'Rejected')}
+                            className="text-sm text-red-600 hover:text-red-800"
+                          >
+                            Decline
+                          </button>
+                        </>
+                      )}
+                      {exp.status !== 'PendingApproval' && (
+                        <>
+                          <button
+                            type="button"
+                            aria-label={`Edit ${exp.title}`}
+                            onClick={() => navigate(`/experiences/${exp.id}/edit`)}
+                            className="rounded-lg p-2 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
+                          >
+                            <Edit fontSize="small" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Delete ${exp.title}`}
+                            onClick={() => deleteExperience(exp)}
+                            className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Delete fontSize="small" />
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}
