@@ -21,45 +21,74 @@ namespace Backend.Services
 
         public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request)
         {
-            var emailExists = await _context.Users.AnyAsync(u => u.Email.ToLower() == request.Email.ToLower().Trim());
+            // 1. Check if email exists
+            var emailExists = await _context.Users
+                .AnyAsync(u => u.Email.ToLower() == request.Email.ToLower().Trim());
+
             if (emailExists)
             {
                 throw new InvalidOperationException("This email address is already registered.");
             }
 
+            // 2. ✅ FIXED: string comparison
+            if (request.Role == "Traveler")
+            {
+                throw new InvalidOperationException("Traveler accounts must be created via the mobile app.");
+            }
+
+            // 3. ✅ FIXED: string comparison
+            if (request.Role == "Admin")
+            {
+                throw new InvalidOperationException("Admin accounts cannot be created via registration.");
+            }
+
+            // 4. Hash password
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            // Admin is active by default. Local Guides & Travel Agents MUST be approved by Admin.
-            bool startsActive = request.Role == UserRole.Admin;
-
+            // 5. Create User
             var user = new User
             {
                 FullName = request.FullName,
                 Email = request.Email.ToLower().Trim(),
                 PasswordHash = passwordHash,
                 PhoneNumber = request.PhoneNumber,
-                Role = request.Role,
-                IsActive = startsActive
+                Role = request.Role,  // ✅ Already string
+                IsActive = false
             };
 
             _context.Users.Add(user);
 
             Guid? guideId = null;
 
-            if (request.Role == UserRole.LocalGuide)
+            // 6. ✅ FIXED: string comparison
+            if (request.Role == "LocalGuide")
             {
                 var localGuide = new LocalGuide
                 {
-                    UserId = user.Id,
+                    User = user,
                     Bio = request.GuideBio ?? "Experienced local travel guide.",
                     City = request.GuideCity ?? "Sri Lanka",
                     LicenseNumber = request.LicenseNumber,
                     YearsOfExperience = request.YearsOfExperience,
-                    Status = GuideStatus.Pending // Starts as Pending
+                    Status = GuideStatus.Pending
                 };
 
                 _context.LocalGuides.Add(localGuide);
                 guideId = localGuide.Id;
+            }
+
+            // 7. ✅ FIXED: string comparison
+            if (request.Role == "TravelAgent")
+            {
+                // TODO: Add TravelAgent model
+                // var travelAgent = new TravelAgent
+                // {
+                //     User = user,
+                //     AgencyName = request.AgencyName ?? "",
+                //     LicenseNumber = request.AgentLicenseNumber,
+                //     Status = AgentStatus.Pending
+                // };
+                // _context.TravelAgents.Add(travelAgent);
             }
 
             await _context.SaveChangesAsync();
@@ -76,10 +105,10 @@ namespace Backend.Services
                     FullName = user.FullName,
                     Email = user.Email,
                     PhoneNumber = user.PhoneNumber,
-                    Role = user.Role.ToString(),
+                    Role = user.Role,
                     IsActive = user.IsActive,
                     GuideId = guideId,
-                    GuideStatus = request.Role == UserRole.LocalGuide ? GuideStatus.Pending.ToString() : null
+                    GuideStatus = request.Role == "LocalGuide" ? GuideStatus.Pending.ToString() : null
                 }
             };
         }
@@ -95,20 +124,22 @@ namespace Backend.Services
                 throw new UnauthorizedAccessException("Invalid email or password.");
             }
 
-            // 🛑 STRICT APPROVAL ENFORCEMENT:
-            if (!user.IsActive && user.Role != UserRole.Admin)
+            if (!user.IsActive && user.Role != "Admin")
             {
-                if (user.Role == UserRole.LocalGuide)
+                if (user.Role == "LocalGuide")
                 {
-                    throw new UnauthorizedAccessException("Your Local Guide account is pending Administrator approval. You cannot log in until approved.");
+                    throw new UnauthorizedAccessException(
+                        "Your Local Guide account is pending Administrator approval. You cannot log in until approved.");
                 }
-                else if (user.Role == UserRole.TravelAgent)
+                else if (user.Role == "TravelAgent")
                 {
-                    throw new UnauthorizedAccessException("Your Travel Agent account is pending Administrator approval. You cannot log in until approved.");
+                    throw new UnauthorizedAccessException(
+                        "Your Travel Agent account is pending Administrator approval. You cannot log in until approved.");
                 }
                 else
                 {
-                    throw new UnauthorizedAccessException("Your account is currently inactive. Please contact the administrator.");
+                    throw new UnauthorizedAccessException(
+                        "Your account is currently inactive. Please contact the administrator.");
                 }
             }
 
@@ -125,7 +156,7 @@ namespace Backend.Services
                     FullName = user.FullName,
                     Email = user.Email,
                     PhoneNumber = user.PhoneNumber,
-                    Role = user.Role.ToString(),
+                    Role = user.Role,
                     IsActive = user.IsActive,
                     GuideId = guideId,
                     GuideStatus = user.LocalGuideProfile?.Status.ToString()
@@ -150,7 +181,7 @@ namespace Backend.Services
                 FullName = user.FullName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
-                Role = user.Role.ToString(),
+                Role = user.Role,
                 IsActive = user.IsActive,
                 GuideId = user.LocalGuideProfile?.Id,
                 GuideStatus = user.LocalGuideProfile?.Status.ToString()

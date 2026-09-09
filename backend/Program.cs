@@ -19,7 +19,7 @@ var dbName = Environment.GetEnvironmentVariable("DB_NAME") ?? "travel_agentic_db
 var dbUser = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
 var dbPass = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "postgres";
 
-var connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass};";
+var connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass};SSL Mode=Require;Trust Server Certificate=true;Pooling=true;";
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));

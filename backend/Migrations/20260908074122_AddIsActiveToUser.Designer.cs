@@ -3,6 +3,7 @@ using System;
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260908074122_AddIsActiveToUser")]
+    partial class AddIsActiveToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -65,7 +68,7 @@ namespace backend.Migrations
                             IconName = "hiking",
                             IsActive = true,
                             Name = "Hiking & Trekking",
-                            UpdatedAt = new DateTime(2026, 9, 8, 8, 1, 57, 575, DateTimeKind.Utc).AddTicks(6855)
+                            UpdatedAt = new DateTime(2026, 9, 8, 7, 41, 22, 91, DateTimeKind.Utc).AddTicks(3567)
                         },
                         new
                         {
@@ -75,7 +78,7 @@ namespace backend.Migrations
                             IconName = "tea",
                             IsActive = true,
                             Name = "Tea & Plantation",
-                            UpdatedAt = new DateTime(2026, 9, 8, 8, 1, 57, 575, DateTimeKind.Utc).AddTicks(6859)
+                            UpdatedAt = new DateTime(2026, 9, 8, 7, 41, 22, 91, DateTimeKind.Utc).AddTicks(3571)
                         },
                         new
                         {
@@ -85,7 +88,7 @@ namespace backend.Migrations
                             IconName = "temple",
                             IsActive = true,
                             Name = "Culture & Heritage",
-                            UpdatedAt = new DateTime(2026, 9, 8, 8, 1, 57, 575, DateTimeKind.Utc).AddTicks(6862)
+                            UpdatedAt = new DateTime(2026, 9, 8, 7, 41, 22, 91, DateTimeKind.Utc).AddTicks(3574)
                         });
                 });
 
@@ -153,7 +156,7 @@ namespace backend.Migrations
                             Longitude = 81.046599999999998,
                             Name = "Ella",
                             ProvinceState = "Uva Province",
-                            UpdatedAt = new DateTime(2026, 9, 8, 8, 1, 57, 575, DateTimeKind.Utc).AddTicks(6912)
+                            UpdatedAt = new DateTime(2026, 9, 8, 7, 41, 22, 91, DateTimeKind.Utc).AddTicks(3631)
                         },
                         new
                         {
@@ -167,7 +170,7 @@ namespace backend.Migrations
                             Longitude = 80.633700000000005,
                             Name = "Kandy",
                             ProvinceState = "Central Province",
-                            UpdatedAt = new DateTime(2026, 9, 8, 8, 1, 57, 575, DateTimeKind.Utc).AddTicks(6916)
+                            UpdatedAt = new DateTime(2026, 9, 8, 7, 41, 22, 91, DateTimeKind.Utc).AddTicks(3637)
                         });
                 });
 
@@ -333,10 +336,8 @@ namespace backend.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -356,9 +357,9 @@ namespace backend.Migrations
                             Email = "admin@travelapp.com",
                             FullName = "System Administrator",
                             IsActive = true,
-                            PasswordHash = "$2a$11$dRpFbZkgS0PBkg5VkOdXI.E3yQrfjy5t/2rkYRx3EmeF5YTjcmFi6",
+                            PasswordHash = "$2a$11$7Civ9hBOoYIKkQLUAzRwJe1T0R.WZtTqYhMa7c2OgKDSevWCtf7nq",
                             PhoneNumber = "+94770000000",
-                            Role = "Admin",
+                            Role = 1,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });

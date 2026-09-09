@@ -25,7 +25,8 @@ namespace Backend.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPatch("{id:guid}/status")]
-        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] GuideUpdateStatusDto dto) 
-            => Ok(await _guideService.UpdateGuideStatusAsync(id, dto.Status));
+        // ✅ FIX: Use [FromQuery] instead of [FromBody]
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromQuery] GuideStatus status) 
+            => Ok(await _guideService.UpdateGuideStatusAsync(id, status));
     }
 }

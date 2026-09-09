@@ -17,7 +17,10 @@ namespace Backend.Models
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
 
-        public UserRole Role { get; set; } = UserRole.Traveler;
+        [Required, MaxLength(50)]
+        public string Role { get; set; } = "Traveler";  // ✅ Changed from UserRole to string
+
+        public new bool IsActive { get; set; } = false;
 
         public LocalGuide? LocalGuideProfile { get; set; }
     }

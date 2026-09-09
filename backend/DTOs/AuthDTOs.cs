@@ -18,9 +18,9 @@ namespace Backend.DTOs
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
 
-        // Role: LocalGuide (2) or TravelAgent (4) on Web; Traveler (3) on Mobile
+        // ✅ FIXED: string instead of UserRole enum
         [Required]
-        public UserRole Role { get; set; } = UserRole.Traveler;
+        public string Role { get; set; } = "Traveler";
 
         // Local Guide specific fields
         public string? GuideBio { get; set; }

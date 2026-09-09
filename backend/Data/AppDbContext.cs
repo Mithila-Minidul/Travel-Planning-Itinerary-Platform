@@ -67,7 +67,7 @@ namespace Backend.Data
                 Email = "admin@travelapp.com",
                 PasswordHash = adminPasswordHash,
                 PhoneNumber = "+94770000000",
-                Role = UserRole.Admin,
+                Role = "Admin",
                 IsActive = true,
                 CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)

@@ -28,8 +28,9 @@ namespace Backend.Controllers
         [HttpGet("travel-agents")]
         public async Task<IActionResult> GetTravelAgents()
         {
+            // ✅ FIX: Compare string with string
             var agents = await _context.Users
-                .Where(u => u.Role == UserRole.TravelAgent)
+                .Where(u => u.Role == "TravelAgent")  // ✅ String, not enum
                 .Select(u => new UserProfileDto
                 {
                     Id = u.Id,
@@ -50,7 +51,10 @@ namespace Backend.Controllers
         [HttpPatch("travel-agents/{id:guid}/status")]
         public async Task<IActionResult> UpdateAgentStatus(Guid id, [FromBody] UserStatusUpdateDto dto)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id && u.Role == UserRole.TravelAgent);
+            // ✅ FIX: Compare string with string
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == id && u.Role == "TravelAgent");  // ✅ String, not enum
+
             if (user == null)
             {
                 return NotFound(new { message = "Travel Agent not found." });
