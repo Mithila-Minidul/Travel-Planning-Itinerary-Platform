@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { imageAPI } from '../../api/images';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -95,6 +96,15 @@ const Register = () => {
     setError('');
     setLoading(true);
 
+    let profileImageUrl;
+    try {
+      profileImageUrl = (await imageAPI.upload(formData.profileImageUrl, 'profile-photos')).data.url;
+    } catch (uploadError) {
+      setLoading(false);
+      setError(uploadError.response?.data?.message || 'Unable to upload profile photo.');
+      return;
+    }
+
     // Build payload based on role
     const payload = {
       email,
@@ -102,7 +112,7 @@ const Register = () => {
       fullName,
       role: formData.role,
       phoneNumber,
-      profileImageUrl: formData.profileImageUrl,
+      profileImageUrl,
     };
 
     // Add role-specific fields
@@ -142,13 +152,8 @@ const Register = () => {
       setError('Profile photo must be smaller than 2MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setFormData((current) => ({ ...current, profileImageUrl: reader.result }));
-      setError('');
-    };
-    reader.onerror = () => setError('Unable to read the profile photo.');
-    reader.readAsDataURL(file);
+    setFormData((current) => ({ ...current, profileImageUrl: file }));
+    setError('');
   };
 
   return (
@@ -246,7 +251,7 @@ const Register = () => {
               required
             />
             {formData.profileImageUrl && (
-              <img src={formData.profileImageUrl} alt="Profile preview" className="mt-3 h-20 w-20 rounded-full object-cover" />
+              <img src={formData.profileImageUrl instanceof File ? URL.createObjectURL(formData.profileImageUrl) : formData.profileImageUrl} alt="Profile preview" className="mt-3 h-20 w-20 rounded-full object-cover" />
             )}
             <p className="mt-1 text-xs text-gray-400">Image files only, maximum 2MB.</p>
           </div>

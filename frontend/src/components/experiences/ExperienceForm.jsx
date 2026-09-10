@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { experienceAPI } from '../../api/experiences';
 import { destinationAPI } from '../../api/destinations';
 import { categoryAPI } from '../../api/categories';
+import { imageAPI } from '../../api/images';
 import { useAuth } from '../../context/AuthContext';
 import { ArrowBackIos, ArrowForwardIos } from '@mui/icons-material';
 import toast from 'react-hot-toast';
@@ -95,7 +96,7 @@ const ExperienceForm = () => {
     }));
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
@@ -114,15 +115,14 @@ const ExperienceForm = () => {
       toast.error(`You can add up to 4 images. ${availableSlots} slot(s) remaining.`);
     }
 
-    Promise.all(selectedFiles.map((file) => new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    }))).then((newImages) => {
+    try {
+      const uploads = await Promise.all(selectedFiles.map((file) => imageAPI.upload(file, 'experiences')));
+      const newImages = uploads.map((response) => response.data.url);
       setFormData((current) => ({ ...current, imageUrls: [...current.imageUrls, ...newImages] }));
       setImagePreviews((current) => [...current, ...newImages]);
-    }).catch(() => toast.error('Unable to read the selected image.'));
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to upload the selected images.');
+    }
     e.target.value = '';
   };
 

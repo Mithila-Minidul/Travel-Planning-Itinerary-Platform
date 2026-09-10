@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { destinationAPI } from '../api/destinations';
+import { imageAPI } from '../api/images';
 import { experienceAPI } from '../api/experiences';
 import { useAuth } from '../context/AuthContext';
 import { Add, Visibility, Close, Delete } from '@mui/icons-material';
@@ -60,7 +61,7 @@ const DestinationsPage = () => {
     setFormData((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleImageChange = (event) => {
+  const handleImageChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
@@ -72,9 +73,12 @@ const DestinationsPage = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => setFormData((current) => ({ ...current, imageUrl: reader.result }));
-    reader.readAsDataURL(file);
+    try {
+      const response = await imageAPI.upload(file, 'destinations');
+      setFormData((current) => ({ ...current, imageUrl: response.data.url }));
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to upload the destination image.');
+    }
   };
 
   const createDestination = async (event) => {

@@ -33,6 +33,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHttpClient<IWeatherService, WeatherService>();
+builder.Services.AddScoped<ImageUploadService>();
 
 // Member 1 Service Registrations
 builder.Services.AddScoped<ICategoryService, CategoryService>();
