@@ -8,6 +8,7 @@ import {
   Group,
   People,
   Verified,
+  RateReview,
   SmartToy,
 } from '@mui/icons-material';
 
@@ -45,6 +46,7 @@ const Sidebar = () => {
       { label: 'My Experiences', icon: <Tour />, path: '/my-experiences' },
       { label: 'Add Experience', icon: <Group />, path: '/experiences/new' },
       { label: 'My Bookings', icon: <Verified />, path: '/bookings' },
+      { label: 'Reviews & Ratings', icon: <RateReview />, path: '/reviews-ratings' },
     );
   }
 
