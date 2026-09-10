@@ -8,6 +8,7 @@ import { ArrowBackIos, ArrowForwardIos } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 
 const ExperienceForm = () => {
+  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -26,6 +27,9 @@ const ExperienceForm = () => {
     meetingPoint: '',
     destinationId: '',
     categoryId: '',
+    availableWeekdays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    startTime: '08:00',
+    endTime: '12:00',
     imageUrls: [],
   });
 
@@ -51,6 +55,11 @@ const ExperienceForm = () => {
         meetingPoint: experience.meetingPoint || '',
         destinationId: experience.destinationId || '',
         categoryId: experience.categoryId || '',
+        availableWeekdays: experience.availableWeekdays?.length
+          ? experience.availableWeekdays
+          : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        startTime: experience.startTime || '08:00',
+        endTime: experience.endTime || '12:00',
         imageUrls,
       });
       setImagePreviews(imageUrls);
@@ -75,6 +84,15 @@ const ExperienceForm = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const toggleWeekday = (day) => {
+    setFormData((current) => ({
+      ...current,
+      availableWeekdays: current.availableWeekdays.includes(day)
+        ? current.availableWeekdays.filter((item) => item !== day)
+        : [...current.availableWeekdays, day],
+    }));
   };
 
   const handleFileChange = (e) => {
@@ -134,6 +152,16 @@ const ExperienceForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.availableWeekdays.length) {
+      toast.error('Select at least one available day.');
+      return;
+    }
+    const startMinutes = formData.startTime.split(':').reduce((hours, value) => hours * 60 + Number(value), 0);
+    const endMinutes = formData.endTime.split(':').reduce((hours, value) => hours * 60 + Number(value), 0);
+    if (endMinutes <= startMinutes || endMinutes - startMinutes > 24 * 60) {
+      toast.error('End time must be after start time and within 24 hours.');
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
@@ -335,6 +363,43 @@ const ExperienceForm = () => {
           </div>
           <input id="imageInput" type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
         </div>
+
+        <section className="mb-6 border-t border-slate-200 pt-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-slate-900">Manage Availability</h2>
+            <p className="mt-1 text-sm text-slate-500">Choose the recurring days and time window when guests can book this experience.</p>
+          </div>
+
+          <div className="mb-5">
+            <p className="mb-2 text-sm font-medium text-gray-700">Available Days *</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              {weekdays.map((day) => {
+                const selected = formData.availableWeekdays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleWeekday(day)}
+                    aria-pressed={selected}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${selected ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500 hover:border-indigo-300'}`}
+                  >
+                    {selected ? '✓' : '×'} {day.slice(0, 3)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="text-sm font-medium text-gray-700">Start Time *
+              <input type="time" name="startTime" value={formData.startTime} onChange={handleChange} className="mt-1 w-full rounded-lg border px-4 py-2 font-normal focus:outline-none focus:ring-2 focus:ring-indigo-500" required />
+            </label>
+            <label className="text-sm font-medium text-gray-700">End Time *
+              <input type="time" name="endTime" value={formData.endTime} onChange={handleChange} className="mt-1 w-full rounded-lg border px-4 py-2 font-normal focus:outline-none focus:ring-2 focus:ring-indigo-500" required />
+            </label>
+          </div>
+
+        </section>
 
         {/* Submit & Cancel Buttons */}
         <div className="flex gap-4 mt-4">

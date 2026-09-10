@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -30,6 +31,15 @@ namespace Backend.Models
         public int DurationHours { get; set; }
         public int MaxCapacity { get; set; }
 
+        [Required, MaxLength(100)]
+        public string AvailableWeekdays { get; set; } = "Monday,Tuesday,Wednesday,Thursday,Friday";
+
+        [Required, MaxLength(5)]
+        public string StartTime { get; set; } = "08:00";
+
+        [Required, MaxLength(5)]
+        public string EndTime { get; set; } = "12:00";
+
         [MaxLength(500)]
         public string MeetingPoint { get; set; } = string.Empty;
 
@@ -47,5 +57,6 @@ namespace Backend.Models
 
         public decimal Rating { get; set; } = 0.0m;
         public int TotalBookingsCount { get; set; } = 0;
+
     }
 }

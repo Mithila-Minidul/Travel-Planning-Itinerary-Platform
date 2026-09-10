@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { experienceAPI } from '../api/experiences';
-import { Add, Edit, Delete, LocationOn, Schedule, People, Place, ArrowBackIos, ArrowForwardIos } from '@mui/icons-material';
+import { Add, Edit, Delete, LocationOn, Schedule, People, Place, AccessTime, ArrowBackIos, ArrowForwardIos,CalendarToday } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 
 const MyExperiencesPage = () => {
@@ -139,6 +139,13 @@ const MyExperiencesPage = () => {
                   <span className="flex items-center gap-2"><span className="text-indigo-600"><People fontSize="small" /></span>{exp.maxCapacity} guests</span>
                   <span className="flex items-center gap-2"><span className="text-indigo-600"><Place fontSize="small" /></span>{exp.meetingPoint || 'Flexible'}</span>
                   <span className="flex items-center gap-2 font-bold text-indigo-700">${exp.currentCalculatedPrice}</span>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 sm:grid-cols-2">
+                  <span className="flex items-center gap-2 sm:col-span-2">
+                    <CalendarToday className="text-indigo-600" fontSize="small" />
+                    <strong>Available:</strong> {(exp.availableWeekdays || []).map((day) => day.slice(0, 3)).join(', ') || 'Not set'}
+                  </span>
+                  <span className="flex items-center gap-2"><AccessTime className="text-indigo-600" fontSize="small" /><strong>Time:</strong> {exp.startTime || '--:--'} - {exp.endTime || '--:--'}</span>
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
                   <button

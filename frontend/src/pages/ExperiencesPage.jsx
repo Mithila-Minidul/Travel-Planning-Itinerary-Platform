@@ -8,10 +8,12 @@ import {
   Delete,
   LocationOn,
   Schedule,
+  AccessTime,
   People,
   Place,
   ArrowBackIos,
   ArrowForwardIos,
+  CalendarToday,
 } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 
@@ -156,6 +158,13 @@ const ExperiencesPage = () => {
                   <span className="flex items-center gap-1.5"><People className="text-indigo-600" fontSize="small" />{exp.maxCapacity} guests</span>
                   <span className="flex min-w-0 items-center gap-1.5"><Place className="shrink-0 text-indigo-600" fontSize="small" /><span className="truncate">{exp.meetingPoint || 'Flexible'}</span></span>
                   <span className="font-bold text-indigo-700">${exp.currentCalculatedPrice}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+                  <span className="flex items-center gap-1.5">
+                    <CalendarToday className="text-indigo-600" fontSize="small" />
+                    <strong>Available:</strong> {(exp.availableWeekdays || []).map((day) => day.slice(0, 3)).join(', ') || 'Not set'}
+                  </span>
+                  <span className="flex items-center gap-1.5"><AccessTime className="text-indigo-600" fontSize="small" /><strong>Time:</strong> {exp.startTime || '--:--'} - {exp.endTime || '--:--'}</span>
                 </div>
                 <div className="flex justify-end gap-2 mt-3">
                   {isAdmin && (

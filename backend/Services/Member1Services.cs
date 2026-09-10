@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Backend.Data;
@@ -306,10 +307,12 @@ namespace Backend.Services
                 Status = ExperienceStatus.PendingApproval, // Admin must approve
                 IsDynamicPricingEnabled = dto.IsDynamicPricingEnabled,
                 WeekendMultiplier = dto.WeekendMultiplier,
-                PeakSeasonMultiplier = dto.PeakSeasonMultiplier
+                PeakSeasonMultiplier = dto.PeakSeasonMultiplier,
+                AvailableWeekdays = string.Join(',', dto.AvailableWeekdays)
             };
 
             _context.Experiences.Add(exp);
+            ValidateAvailability(exp, dto);
             await _context.SaveChangesAsync();
             return await GetByIdAsync(exp.Id);
         }
@@ -335,7 +338,9 @@ namespace Backend.Services
             exp.WeekendMultiplier = dto.WeekendMultiplier;
             exp.PeakSeasonMultiplier = dto.PeakSeasonMultiplier;
             exp.Status = ExperienceStatus.PendingApproval;
+            exp.AvailableWeekdays = string.Join(',', dto.AvailableWeekdays);
 
+            ValidateAvailability(exp, dto);
             await _context.SaveChangesAsync();
             return await GetByIdAsync(exp.Id);
         }
@@ -364,7 +369,9 @@ namespace Backend.Services
             exp.IsDynamicPricingEnabled = dto.IsDynamicPricingEnabled;
             exp.WeekendMultiplier = dto.WeekendMultiplier;
             exp.PeakSeasonMultiplier = dto.PeakSeasonMultiplier;
+            exp.AvailableWeekdays = string.Join(',', dto.AvailableWeekdays);
 
+            ValidateAvailability(exp, dto);
             await _context.SaveChangesAsync();
             return await GetByIdAsync(exp.Id);
         }
@@ -389,6 +396,31 @@ namespace Backend.Services
 
             _context.Experiences.Remove(exp);
             await _context.SaveChangesAsync();
+        }
+
+        private static void ValidateAvailability(Experience experience, ExperienceCreateDto dto)
+        {
+            var validDays = Enum.GetNames<DayOfWeek>();
+            var weekdays = dto.AvailableWeekdays
+                .Select(day => day.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (weekdays.Count == 0 || weekdays.Any(day => !validDays.Contains(day, StringComparer.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException("Select at least one valid available day.");
+            }
+
+            if (!TimeOnly.TryParseExact(dto.StartTime, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var startTime) ||
+                !TimeOnly.TryParseExact(dto.EndTime, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var endTime) ||
+                startTime >= endTime ||
+                endTime - startTime > TimeSpan.FromHours(24))
+            {
+                throw new InvalidOperationException("End time must be after start time and within 24 hours.");
+            }
+
+            experience.StartTime = startTime.ToString("HH:mm", CultureInfo.InvariantCulture);
+            experience.EndTime = endTime.ToString("HH:mm", CultureInfo.InvariantCulture);
         }
 
         public async Task<ExperienceResponseDto> UpdateStatusAsync(Guid id, ExperienceStatus status)
@@ -508,6 +540,9 @@ namespace Backend.Services
                 CurrentCalculatedPrice = Math.Round(currentPrice, 2),
                 DurationHours = e.DurationHours,
                 MaxCapacity = e.MaxCapacity,
+                AvailableWeekdays = e.AvailableWeekdays.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList(),
+                StartTime = e.StartTime,
+                EndTime = e.EndTime,
                 MeetingPoint = e.MeetingPoint,
                 CoverImageUrl = e.CoverImageUrl,
                 ImageUrls = new[] { e.CoverImageUrl, e.Image2Url, e.Image3Url, e.Image4Url }

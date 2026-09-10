@@ -51,6 +51,7 @@ namespace Backend.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
+
             // Seed Admin & Default categories
             SeedInitialData(modelBuilder);
         }

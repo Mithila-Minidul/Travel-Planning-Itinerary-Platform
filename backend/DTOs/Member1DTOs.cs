@@ -107,6 +107,16 @@ namespace Backend.DTOs
         [Required, Range(1, 50)]
         public int MaxCapacity { get; set; }
 
+        [Required]
+        public List<string> AvailableWeekdays { get; set; } = new();
+
+        [Required, RegularExpression(@"^([01]\d|2[0-3]):[0-5]\d$")]
+        public string StartTime { get; set; } = "08:00";
+
+        [Required, RegularExpression(@"^([01]\d|2[0-3]):[0-5]\d$")]
+        public string EndTime { get; set; } = "12:00";
+
+
         [MaxLength(500)]
         public string MeetingPoint { get; set; } = string.Empty;
 
@@ -132,6 +142,9 @@ namespace Backend.DTOs
         public decimal CurrentCalculatedPrice { get; set; }
         public int DurationHours { get; set; }
         public int MaxCapacity { get; set; }
+        public List<string> AvailableWeekdays { get; set; } = new();
+        public string StartTime { get; set; } = string.Empty;
+        public string EndTime { get; set; } = string.Empty;
         public string MeetingPoint { get; set; } = string.Empty;
         public string? CoverImageUrl { get; set; }
         public List<string?> ImageUrls { get; set; } = new();
