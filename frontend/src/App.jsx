@@ -13,7 +13,6 @@ import Register from './components/auth/Register';
 import DashboardPage from './pages/DashboardPage';
 import DestinationsPage from './pages/DestinationsPage';
 import ExperiencesPage from './pages/ExperiencesPage';
-import CategoriesPage from './pages/CategoriesPage';
 import GuidesPage from './pages/GuidesPage';
 import AIReviewPage from './pages/AIReviewPage';
 import MyExperiencesPage from './pages/MyExperiencesPage';
@@ -62,11 +61,6 @@ function App() {
             <Route path="/experiences/:id/edit" element={
               <ProtectedRoute allowedRoles={['Admin', 'LocalGuide']}>
                 <ExperienceForm />
-              </ProtectedRoute>
-            } />
-            <Route path="/categories" element={
-              <ProtectedRoute allowedRoles={['Admin']}>
-                <CategoriesPage />
               </ProtectedRoute>
             } />
             <Route path="/guides" element={

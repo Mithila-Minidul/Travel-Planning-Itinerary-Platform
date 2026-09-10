@@ -5,4 +5,5 @@ export const destinationAPI = {
   getById: (id) => apiClient.get(`/Destinations/${id}`),
   getWeather: (id) => apiClient.get(`/Destinations/${id}/weather`),
   create: (data) => apiClient.post('/Destinations', data),
+  remove: (id) => apiClient.delete(`/Destinations/${id}`),
 };

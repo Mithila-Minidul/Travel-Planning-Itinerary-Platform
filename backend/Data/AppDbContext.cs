@@ -76,11 +76,23 @@ namespace Backend.Data
             var catHikingId = Guid.Parse("22222222-2222-2222-2222-222222222221");
             var catTeaId = Guid.Parse("22222222-2222-2222-2222-222222222222");
             var catCultureId = Guid.Parse("22222222-2222-2222-2222-222222222223");
+            var catBeachId = Guid.Parse("22222222-2222-2222-2222-222222222224");
+            var catWildlifeId = Guid.Parse("22222222-2222-2222-2222-222222222225");
+            var catTrainId = Guid.Parse("22222222-2222-2222-2222-222222222226");
+            var catNatureId = Guid.Parse("22222222-2222-2222-2222-222222222227");
+            var catFoodId = Guid.Parse("22222222-2222-2222-2222-222222222228");
+            var catFestivalsId = Guid.Parse("22222222-2222-2222-2222-222222222229");
 
             modelBuilder.Entity<Category>().HasData(
-                new Category { Id = catHikingId, Name = "Hiking & Trekking", Description = "Scenic mountain and forest trails", IconName = "hiking", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new Category { Id = catHikingId, Name = "Hiking", Description = "Scenic mountain and forest trails", IconName = "hiking", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
                 new Category { Id = catTeaId, Name = "Tea & Plantation", Description = "Tea factory visits and tasting sessions", IconName = "tea", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-                new Category { Id = catCultureId, Name = "Culture & Heritage", Description = "Temples, historic monuments, and heritage sites", IconName = "temple", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
+                new Category { Id = catCultureId, Name = "Culture & Heritage", Description = "Temples, historic monuments, and heritage sites", IconName = "temple", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new Category { Id = catBeachId, Name = "Beach & Surfing", Description = "Coastal escapes, swimming, and surfing", IconName = "beach", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new Category { Id = catWildlifeId, Name = "Wildlife & Safari", Description = "Wildlife encounters and safari tours", IconName = "wildlife", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new Category { Id = catTrainId, Name = "Train Journeys", Description = "Scenic railway journeys across Sri Lanka", IconName = "train", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new Category { Id = catNatureId, Name = "Nature & Waterfalls", Description = "Waterfalls, forests, and natural landscapes", IconName = "nature", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new Category { Id = catFoodId, Name = "Food & Cooking", Description = "Local food, markets, and cooking experiences", IconName = "food", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new Category { Id = catFestivalsId, Name = "Festivals & Events", Description = "Local festivals, celebrations, and events", IconName = "festival", CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
             );
 
             var destEllaId = Guid.Parse("33333333-3333-3333-3333-333333333331");

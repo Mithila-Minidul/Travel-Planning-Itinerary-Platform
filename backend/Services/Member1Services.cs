@@ -77,7 +77,7 @@ namespace Backend.Services
                     Latitude = d.Latitude,
                     Longitude = d.Longitude,
                     CurrentSeason = d.CurrentSeason.ToString(),
-                    ActiveExperiencesCount = d.Experiences.Count(e => e.Status == ExperienceStatus.Approved)
+                    ActiveExperiencesCount = d.Experiences.Count(e => e.Status == ExperienceStatus.Approved && e.IsActive)
                 }).ToListAsync();
         }
 
@@ -97,7 +97,7 @@ namespace Backend.Services
                 Latitude = d.Latitude,
                 Longitude = d.Longitude,
                 CurrentSeason = d.CurrentSeason.ToString(),
-                ActiveExperiencesCount = d.Experiences.Count(e => e.Status == ExperienceStatus.Approved)
+                ActiveExperiencesCount = d.Experiences.Count(e => e.Status == ExperienceStatus.Approved && e.IsActive)
             };
         }
 
@@ -117,6 +117,15 @@ namespace Backend.Services
             _context.Destinations.Add(dest);
             await _context.SaveChangesAsync();
             return await GetByIdAsync(dest.Id);
+        }
+
+        public async Task DeleteAsync(Guid id)
+        {
+            var destination = await _context.Destinations.FirstOrDefaultAsync(d => d.Id == id && d.IsActive);
+            if (destination == null) throw new KeyNotFoundException("Destination not found.");
+
+            destination.IsActive = false;
+            await _context.SaveChangesAsync();
         }
 
         public async Task<WeatherResponseDto> GetDestinationWeatherAsync(Guid destinationId)

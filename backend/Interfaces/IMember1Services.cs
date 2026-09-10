@@ -17,6 +17,7 @@ namespace Backend.Interfaces
         Task<IEnumerable<DestinationResponseDto>> GetAllAsync();
         Task<DestinationResponseDto> GetByIdAsync(Guid id);
         Task<DestinationResponseDto> CreateAsync(DestinationCreateDto dto);
+        Task DeleteAsync(Guid id);
         Task<WeatherResponseDto> GetDestinationWeatherAsync(Guid destinationId);
     }
 

@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Dashboard,
   LocationOn,
-  Category,
   Tour,
   Group,
   People,
@@ -26,7 +25,6 @@ const Sidebar = () => {
       { label: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
       { label: 'Destinations', icon: <LocationOn />, path: '/destinations' },
       { label: 'Experiences', icon: <Tour />, path: '/experiences' },
-      { label: 'Categories', icon: <Category />, path: '/categories' },
       { label: 'Local Guides', icon: <People />, path: '/guides' },
     );
   }

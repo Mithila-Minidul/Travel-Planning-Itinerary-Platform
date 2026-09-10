@@ -30,5 +30,13 @@ namespace Backend.Controllers
             var result = await _destinationService.CreateAsync(dto);
             return StatusCode(201, result);
         }
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            await _destinationService.DeleteAsync(id);
+            return NoContent();
+        }
     }
 }
