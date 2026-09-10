@@ -7,6 +7,11 @@ import {
   Tour,
   Group,
   People,
+  SupportAgent,
+  Luggage,
+  BookOnline,
+  Payments,
+  Reviews,
   Verified,
   RateReview,
   SmartToy,
@@ -27,6 +32,12 @@ const Sidebar = () => {
       { label: 'Destinations', icon: <LocationOn />, path: '/destinations' },
       { label: 'Experiences', icon: <Tour />, path: '/experiences' },
       { label: 'Local Guides', icon: <People />, path: '/guides' },
+      { label: 'Travel Agents', icon: <SupportAgent />, path: '/travel-agents' },
+      { label: 'Travelers', icon: <People />, path: '/travelers' },
+      { label: 'All Trips', icon: <Luggage />, path: '/trips' },
+      { label: 'All Bookings', icon: <BookOnline />, path: '/bookings' },
+      { label: 'Payments', icon: <Payments />, path: '/payments' },
+      { label: 'Reviews', icon: <Reviews />, path: '/reviews' },
     );
   }
 
