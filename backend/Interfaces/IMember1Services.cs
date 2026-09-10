@@ -39,6 +39,7 @@ namespace Backend.Interfaces
         Task<ExperienceResponseDto> UpdateAsync(Guid guideId, Guid id, ExperienceCreateDto dto);
         Task<ExperienceResponseDto> UpdateByAdminAsync(Guid id, ExperienceCreateDto dto);
         Task DeleteByAdminAsync(Guid id);
+        Task DeleteAsync(Guid guideId, Guid id);
         Task<ExperienceResponseDto> UpdateStatusAsync(Guid id, ExperienceStatus status);
         Task<DynamicPriceCalculationDto> CalculatePriceAsync(Guid experienceId, DateTime targetDate);
         Task<IEnumerable<ExperienceResponseDto>> SearchForResearchAgentAsync(AgentExperienceSearchQueryDto query);

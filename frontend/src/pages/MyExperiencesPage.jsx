@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { experienceAPI } from '../api/experiences';
-import { Add, Edit, LocationOn, Schedule, People, Place, ArrowBackIos, ArrowForwardIos } from '@mui/icons-material';
+import { Add, Edit, Delete, LocationOn, Schedule, People, Place, ArrowBackIos, ArrowForwardIos } from '@mui/icons-material';
+import toast from 'react-hot-toast';
 
 const MyExperiencesPage = () => {
   const [experiences, setExperiences] = useState([]);
@@ -37,6 +38,18 @@ const MyExperiencesPage = () => {
         [experienceId]: (currentIndex + direction + imageCount) % imageCount,
       };
     });
+  };
+
+  const deleteExperience = async (experience) => {
+    if (!window.confirm(`Delete "${experience.title}"? This cannot be undone.`)) return;
+
+    try {
+      await experienceAPI.remove(experience.id);
+      setExperiences((current) => current.filter((item) => item.id !== experience.id));
+      toast.success('Experience deleted.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to delete experience.');
+    }
   };
 
   if (loading) {
@@ -135,6 +148,14 @@ const MyExperiencesPage = () => {
                     className="rounded-lg p-2 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
                   >
                     <Edit fontSize="small" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Delete ${exp.title}`}
+                    onClick={() => deleteExperience(exp)}
+                    className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Delete fontSize="small" />
                   </button>
                 </div>
               </div>

@@ -380,6 +380,15 @@ namespace Backend.Services
             await _context.SaveChangesAsync();
         }
 
+        public async Task DeleteAsync(Guid guideId, Guid id)
+        {
+            var exp = await _context.Experiences.FirstOrDefaultAsync(e => e.Id == id && e.GuideId == guideId);
+            if (exp == null) throw new KeyNotFoundException("Experience not found.");
+
+            _context.Experiences.Remove(exp);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<ExperienceResponseDto> UpdateStatusAsync(Guid id, ExperienceStatus status)
         {
             var exp = await _context.Experiences.FindAsync(id);

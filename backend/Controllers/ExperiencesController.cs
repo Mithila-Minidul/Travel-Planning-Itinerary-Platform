@@ -87,11 +87,23 @@ namespace Backend.Controllers
             return Ok(await _experienceService.UpdateAsync(guideId, id, dto));
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,LocalGuide")]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            await _experienceService.DeleteByAdminAsync(id);
+            if (User.IsInRole("Admin"))
+            {
+                await _experienceService.DeleteByAdminAsync(id);
+                return NoContent();
+            }
+
+            var guideIdClaim = User.FindFirst("GuideId")?.Value;
+            if (string.IsNullOrEmpty(guideIdClaim) || !Guid.TryParse(guideIdClaim, out var guideId))
+            {
+                return Forbid();
+            }
+
+            await _experienceService.DeleteAsync(guideId, id);
             return NoContent();
         }
 
