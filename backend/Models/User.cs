@@ -15,7 +15,17 @@ namespace Backend.Models
         public string PasswordHash { get; set; } = string.Empty;
 
         [MaxLength(20)]
-        public string? PhoneNumber { get; set; }
+        [Required]
+        public string PhoneNumber { get; set; } = string.Empty;
+
+        [Required]
+        public string ProfileImageUrl { get; set; } = string.Empty;
+
+        [MaxLength(200)]
+        public string? AgencyName { get; set; }
+
+        [MaxLength(200)]
+        public string? AgentLicenseNumber { get; set; }
 
         [Required, MaxLength(50)]
         public string Role { get; set; } = "Traveler";  // ✅ Changed from UserRole to string

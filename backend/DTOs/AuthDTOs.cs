@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Backend.Models;
 
 namespace Backend.DTOs
 {
-    public class RegisterRequestDto
+    public class RegisterRequestDto : IValidatableObject
     {
         [Required, MaxLength(100)]
         public string FullName { get; set; } = string.Empty;
@@ -15,22 +16,49 @@ namespace Backend.DTOs
         [Required, MinLength(6, ErrorMessage = "Password must be at least 6 characters long.")]
         public string Password { get; set; } = string.Empty;
 
-        [MaxLength(20)]
-        public string? PhoneNumber { get; set; }
+        [Required, MaxLength(20), RegularExpression(
+            @"^(07\d{8}|\+94[\s-]?7\d{8}|0094[\s-]?7\d{8})$",
+            ErrorMessage = "Enter a valid Sri Lankan mobile number (07XXXXXXXX or +947XXXXXXXX).")]
+        public string PhoneNumber { get; set; } = string.Empty;
+
+        [Required]
+        public string ProfileImageUrl { get; set; } = string.Empty;
 
         // ✅ FIXED: string instead of UserRole enum
         [Required]
         public string Role { get; set; } = "Traveler";
 
         // Local Guide specific fields
-        public string? GuideBio { get; set; }
-        public string? GuideCity { get; set; }
-        public string? LicenseNumber { get; set; }
-        public int YearsOfExperience { get; set; } = 0;
+        [MaxLength(500)]
+        public string GuideBio { get; set; } = string.Empty;
+        [MaxLength(100)]
+        public string GuideCity { get; set; } = string.Empty;
+        [MaxLength(200)]
+        public string LicenseNumber { get; set; } = string.Empty;
+        [Range(0, 80)]
+        public int YearsOfExperience { get; set; }
 
         // Travel Agent specific fields
-        public string? AgencyName { get; set; }
-        public string? AgentLicenseNumber { get; set; }
+        [MaxLength(200)]
+        public string AgencyName { get; set; } = string.Empty;
+        [MaxLength(200)]
+        public string AgentLicenseNumber { get; set; } = string.Empty;
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (Role == "LocalGuide")
+            {
+                if (string.IsNullOrWhiteSpace(GuideBio)) yield return new ValidationResult("Guide bio is required.", new[] { nameof(GuideBio) });
+                if (string.IsNullOrWhiteSpace(GuideCity)) yield return new ValidationResult("Guide city is required.", new[] { nameof(GuideCity) });
+                if (string.IsNullOrWhiteSpace(LicenseNumber)) yield return new ValidationResult("Guide license number is required.", new[] { nameof(LicenseNumber) });
+            }
+
+            if (Role == "TravelAgent")
+            {
+                if (string.IsNullOrWhiteSpace(AgencyName)) yield return new ValidationResult("Agency name is required.", new[] { nameof(AgencyName) });
+                if (string.IsNullOrWhiteSpace(AgentLicenseNumber)) yield return new ValidationResult("Agent license number is required.", new[] { nameof(AgentLicenseNumber) });
+            }
+        }
     }
 
     public class LoginRequestDto
@@ -54,7 +82,10 @@ namespace Backend.DTOs
         public Guid Id { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public string? PhoneNumber { get; set; }
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string ProfileImageUrl { get; set; } = string.Empty;
+        public string? AgencyName { get; set; }
+        public string? AgentLicenseNumber { get; set; }
         public string Role { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public Guid? GuideId { get; set; }

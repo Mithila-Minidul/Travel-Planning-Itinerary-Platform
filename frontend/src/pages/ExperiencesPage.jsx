@@ -4,7 +4,6 @@ import { experienceAPI } from '../api/experiences';
 import { categoryAPI } from '../api/categories';
 import { useAuth } from '../context/AuthContext';
 import {
-  Add,
   Edit,
   Delete,
   LocationOn,
@@ -21,7 +20,7 @@ const ExperiencesPage = () => {
   const [imageIndexes, setImageIndexes] = useState({});
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { isAdmin, isLocalGuide } = useAuth();
+  const { isAdmin } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -89,19 +88,11 @@ const ExperiencesPage = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Experiences</h1>
-        {(isAdmin || isLocalGuide) && (
-          <button
-            onClick={() => navigate('/experiences/new')}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition"
-          >
-            <Add fontSize="small" /> Add Experience
-          </button>
-        )}
       </div>
 
       {experiences.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-12 text-center border">
-          <p className="text-gray-500">No experiences found. Add your first experience!</p>
+          <p className="text-gray-500">No experiences found.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">

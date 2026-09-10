@@ -73,6 +73,7 @@ namespace Backend.DTOs
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
+        public string ProfileImageUrl { get; set; } = string.Empty;
         public string Bio { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;
         public string? LicenseNumber { get; set; }

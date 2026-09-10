@@ -37,6 +37,9 @@ namespace Backend.Controllers
                     FullName = u.FullName,
                     Email = u.Email,
                     PhoneNumber = u.PhoneNumber,
+                    ProfileImageUrl = u.ProfileImageUrl,
+                    AgencyName = u.AgencyName,
+                    AgentLicenseNumber = u.AgentLicenseNumber,
                     Role = u.Role.ToString(),
                     IsActive = u.IsActive
                 })

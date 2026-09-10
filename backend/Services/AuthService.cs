@@ -51,9 +51,12 @@ namespace Backend.Services
                 FullName = request.FullName,
                 Email = request.Email.ToLower().Trim(),
                 PasswordHash = passwordHash,
-                PhoneNumber = request.PhoneNumber,
+                PhoneNumber = request.PhoneNumber.Trim(),
+                ProfileImageUrl = request.ProfileImageUrl,
                 Role = request.Role,  // ✅ Already string
-                IsActive = false
+                IsActive = false,
+                AgencyName = request.Role == "TravelAgent" ? request.AgencyName.Trim() : null,
+                AgentLicenseNumber = request.Role == "TravelAgent" ? request.AgentLicenseNumber.Trim() : null
             };
 
             _context.Users.Add(user);
@@ -66,8 +69,8 @@ namespace Backend.Services
                 var localGuide = new LocalGuide
                 {
                     User = user,
-                    Bio = request.GuideBio ?? "Experienced local travel guide.",
-                    City = request.GuideCity ?? "Sri Lanka",
+                    Bio = request.GuideBio.Trim(),
+                    City = request.GuideCity.Trim(),
                     LicenseNumber = request.LicenseNumber,
                     YearsOfExperience = request.YearsOfExperience,
                     Status = GuideStatus.Pending
@@ -80,15 +83,6 @@ namespace Backend.Services
             // 7. ✅ FIXED: string comparison
             if (request.Role == "TravelAgent")
             {
-                // TODO: Add TravelAgent model
-                // var travelAgent = new TravelAgent
-                // {
-                //     User = user,
-                //     AgencyName = request.AgencyName ?? "",
-                //     LicenseNumber = request.AgentLicenseNumber,
-                //     Status = AgentStatus.Pending
-                // };
-                // _context.TravelAgents.Add(travelAgent);
             }
 
             await _context.SaveChangesAsync();
@@ -105,6 +99,9 @@ namespace Backend.Services
                     FullName = user.FullName,
                     Email = user.Email,
                     PhoneNumber = user.PhoneNumber,
+                    ProfileImageUrl = user.ProfileImageUrl,
+                    AgencyName = user.AgencyName,
+                    AgentLicenseNumber = user.AgentLicenseNumber,
                     Role = user.Role,
                     IsActive = user.IsActive,
                     GuideId = guideId,
@@ -156,6 +153,9 @@ namespace Backend.Services
                     FullName = user.FullName,
                     Email = user.Email,
                     PhoneNumber = user.PhoneNumber,
+                    ProfileImageUrl = user.ProfileImageUrl,
+                    AgencyName = user.AgencyName,
+                    AgentLicenseNumber = user.AgentLicenseNumber,
                     Role = user.Role,
                     IsActive = user.IsActive,
                     GuideId = guideId,
@@ -181,6 +181,9 @@ namespace Backend.Services
                 FullName = user.FullName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
+                ProfileImageUrl = user.ProfileImageUrl,
+                AgencyName = user.AgencyName,
+                AgentLicenseNumber = user.AgentLicenseNumber,
                 Role = user.Role,
                 IsActive = user.IsActive,
                 GuideId = user.LocalGuideProfile?.Id,

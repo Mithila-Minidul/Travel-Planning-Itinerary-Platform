@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { guideAPI } from '../api/guides';
 import { useAuth } from '../context/AuthContext';
-import { Verified, Person, Check, Close, Visibility } from '@mui/icons-material';
+import { Verified, Person, Check, Close, Email, Phone, LocationOn, Badge } from '@mui/icons-material';
 
 const GuidesPage = () => {
   const [guides, setGuides] = useState([]);
@@ -39,6 +39,27 @@ const GuidesPage = () => {
   const pendingGuides = guides.filter(g => g.status === 'Pending');
   const approvedGuides = guides.filter(g => g.status === 'Approved');
 
+  const GuideAvatar = ({ guide }) => (
+    guide.profileImageUrl ? (
+      <img src={guide.profileImageUrl} alt={`${guide.fullName} profile`} className="h-16 w-16 rounded-full object-cover ring-2 ring-white shadow" />
+    ) : (
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 ring-2 ring-white shadow">
+        <Person className="text-gray-500" />
+      </div>
+    )
+  );
+
+  const GuideDetails = ({ guide }) => (
+    <div className="grid grid-cols-1 gap-x-5 gap-y-2 text-xs text-gray-600 sm:grid-cols-2">
+      <p className="flex items-center gap-1.5"><Email fontSize="inherit" />{guide.email}</p>
+      <p className="flex items-center gap-1.5"><Phone fontSize="inherit" />{guide.phoneNumber}</p>
+      <p className="flex items-center gap-1.5"><LocationOn fontSize="inherit" />{guide.city}</p>
+      <p className="flex items-center gap-1.5"><Badge fontSize="inherit" />{guide.licenseNumber}</p>
+      <p className="sm:col-span-2"><span className="font-semibold text-gray-700">Experience:</span> {guide.yearsOfExperience} years</p>
+      <p className="sm:col-span-2 leading-5"><span className="font-semibold text-gray-700">Bio:</span> {guide.bio}</p>
+    </div>
+  );
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -54,20 +75,19 @@ const GuidesPage = () => {
       {isAdmin && pendingGuides.length > 0 && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-yellow-700 mb-3">Pending Approvals</h2>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
             {pendingGuides.map((guide) => (
-              <div key={guide.id} className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <div className="bg-yellow-100 p-2 rounded-full">
-                    <Person className="text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-800">{guide.fullName}</p>
-                    <p className="text-sm text-gray-500">{guide.email}</p>
-                    <p className="text-sm text-gray-500">{guide.city} • {guide.yearsOfExperience} years exp</p>
+              <div key={guide.id} className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+                <div className="flex gap-3">
+                  <GuideAvatar guide={guide} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-gray-800">{guide.fullName}</p>
+                    <div className="mt-3 border-t border-yellow-200 pt-3">
+                      <GuideDetails guide={guide} />
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="mt-4 flex justify-end gap-2 border-t border-yellow-200 pt-3">
                   <button
                     onClick={() => updateStatus(guide.id, 'Approved')}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-1 hover:bg-green-700 transition"
@@ -91,28 +111,27 @@ const GuidesPage = () => {
       <h2 className="text-lg font-semibold text-gray-700 mb-3">
         All Guides ({guides.length})
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {approvedGuides.map((guide) => (
-          <div key={guide.id} className="bg-white rounded-xl shadow-sm border p-4 hover:shadow-md transition">
-            <div className="flex items-center gap-4">
-              <div className="bg-gray-100 p-2 rounded-full">
-                <Person className="text-gray-600" />
-              </div>
-              <div className="flex-1">
+          <div key={guide.id} className="rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md">
+            <div className="flex gap-3">
+              <GuideAvatar guide={guide} />
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium text-gray-800">{guide.fullName}</p>
+                  <p className="truncate font-semibold text-gray-800">{guide.fullName}</p>
                   {guide.status === 'Approved' && (
                     <Verified fontSize="small" className="text-green-600" />
                   )}
                 </div>
-                <p className="text-sm text-gray-500">{guide.email}</p>
-                <p className="text-sm text-gray-500">{guide.city} • {guide.yearsOfExperience} years</p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-yellow-500">⭐</span>
                   <span className="text-sm font-medium">{guide.rating || 0}</span>
                   <span className="text-xs text-gray-400">({guide.reviewCount || 0} reviews)</span>
                 </div>
               </div>
+            </div>
+            <div className="mt-3 border-t border-gray-100 pt-3">
+              <GuideDetails guide={guide} />
             </div>
           </div>
         ))}
