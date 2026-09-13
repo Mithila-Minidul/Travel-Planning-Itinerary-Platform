@@ -3,6 +3,9 @@ class User {
   final String fullName;
   final String email;
   final String? phoneNumber;
+  final String? profileImageUrl;      // ✅ ADDED
+  final String? agencyName;            // ✅ ADDED
+  final String? agentLicenseNumber;    // ✅ ADDED
   final String role;
   final bool isActive;
   final String? guideId;
@@ -13,6 +16,9 @@ class User {
     required this.fullName,
     required this.email,
     this.phoneNumber,
+    this.profileImageUrl,
+    this.agencyName,
+    this.agentLicenseNumber,
     required this.role,
     required this.isActive,
     this.guideId,
@@ -25,6 +31,9 @@ class User {
       fullName: json['fullName'] ?? '',
       email: json['email'] ?? '',
       phoneNumber: json['phoneNumber'],
+      profileImageUrl: json['profileImageUrl'],      // ✅ ADDED
+      agencyName: json['agencyName'],                 // ✅ ADDED
+      agentLicenseNumber: json['agentLicenseNumber'], // ✅ ADDED
       role: json['role'] ?? 'Traveler',
       isActive: json['isActive'] ?? false,
       guideId: json['guideId'],
@@ -38,6 +47,9 @@ class User {
       'fullName': fullName,
       'email': email,
       'phoneNumber': phoneNumber,
+      'profileImageUrl': profileImageUrl,
+      'agencyName': agencyName,
+      'agentLicenseNumber': agentLicenseNumber,
       'role': role,
       'isActive': isActive,
       'guideId': guideId,
