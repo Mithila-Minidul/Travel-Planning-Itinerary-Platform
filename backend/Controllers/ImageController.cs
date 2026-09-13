@@ -25,7 +25,9 @@ namespace Backend.Controllers
             _imageService = imageService;
         }
 
-        [Authorize]
+        // ✅ CHANGED: [Authorize] → [AllowAnonymous]
+        // Reason: profile-photos must be uploadable during registration (before login)
+        [AllowAnonymous]
         [HttpPost("upload/{folder}")]
         public async Task<IActionResult> Upload(string folder, IFormFile file)
         {
@@ -33,6 +35,13 @@ namespace Backend.Controllers
             if (!AllowedFolders.Contains(folder))
             {
                 return BadRequest(new { message = $"Invalid folder. Allowed: {string.Join(", ", AllowedFolders)}" });
+            }
+
+            // ✅ SECURITY: Only profile-photos can be uploaded anonymously
+            // All other folders require an authenticated user
+            if (folder != "profile-photos" && !(User.Identity?.IsAuthenticated ?? false))
+            {
+                return Unauthorized(new { message = "Authentication required for this folder." });
             }
 
             // Validate file
@@ -57,6 +66,7 @@ namespace Backend.Controllers
             }
         }
 
+        // ✅ KEPT: [Authorize] — only authenticated users can delete images
         [Authorize]
         [HttpDelete("delete")]
         public async Task<IActionResult> Delete([FromQuery] string url)

@@ -43,6 +43,7 @@ class AuthProvider extends ChangeNotifier {
     required String email,
     required String password,
     String? phoneNumber,
+    String? profileImageUrl,
   }) async {
     _loading = true;
     _error = null;
@@ -54,6 +55,7 @@ class AuthProvider extends ChangeNotifier {
         email: email,
         password: password,
         phoneNumber: phoneNumber,
+        profileImageUrl: profileImageUrl,
       );
       _loading = false;
       notifyListeners();

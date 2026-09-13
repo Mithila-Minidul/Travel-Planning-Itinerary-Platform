@@ -27,6 +27,7 @@ class AuthService {
     required String email,
     required String password,
     String? phoneNumber,
+    String? profileImageUrl,
   }) async {
     await ApiClient.post(ApiConstants.register, {
       'fullName': fullName.trim(),
@@ -34,6 +35,7 @@ class AuthService {
       'password': password,
       'phoneNumber': phoneNumber,
       'role': 'Traveler',
+      'profileImageUrl': profileImageUrl,
     });
   }
 
