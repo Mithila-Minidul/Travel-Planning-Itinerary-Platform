@@ -18,8 +18,9 @@ namespace Backend.Models
         [Required]
         public string PhoneNumber { get; set; } = string.Empty;
 
-        [Required]
-        public string ProfileImageUrl { get; set; } = string.Empty;
+        // ✅ FIXED: Optional — Travelers don't have photo
+        [MaxLength(500)]
+        public string? ProfileImageUrl { get; set; }
 
         [MaxLength(200)]
         public string? AgencyName { get; set; }
@@ -28,7 +29,7 @@ namespace Backend.Models
         public string? AgentLicenseNumber { get; set; }
 
         [Required, MaxLength(50)]
-        public string Role { get; set; } = "Traveler";  // ✅ Changed from UserRole to string
+        public string Role { get; set; } = "Traveler";
 
         public new bool IsActive { get; set; } = false;
 

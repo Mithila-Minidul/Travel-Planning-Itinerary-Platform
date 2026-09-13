@@ -21,10 +21,9 @@ namespace Backend.DTOs
             ErrorMessage = "Enter a valid Sri Lankan mobile number (07XXXXXXXX or +947XXXXXXXX).")]
         public string PhoneNumber { get; set; } = string.Empty;
 
-        [Required]
-        public string ProfileImageUrl { get; set; } = string.Empty;
+        // ✅ FIXED: Removed [Required] — validation happens in Validate() below
+        public string? ProfileImageUrl { get; set; }
 
-        // ✅ FIXED: string instead of UserRole enum
         [Required]
         public string Role { get; set; } = "Traveler";
 
@@ -46,18 +45,31 @@ namespace Backend.DTOs
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
+            // ✅ Local Guide: photo + bio + city + license required
             if (Role == "LocalGuide")
             {
-                if (string.IsNullOrWhiteSpace(GuideBio)) yield return new ValidationResult("Guide bio is required.", new[] { nameof(GuideBio) });
-                if (string.IsNullOrWhiteSpace(GuideCity)) yield return new ValidationResult("Guide city is required.", new[] { nameof(GuideCity) });
-                if (string.IsNullOrWhiteSpace(LicenseNumber)) yield return new ValidationResult("Guide license number is required.", new[] { nameof(LicenseNumber) });
+                if (string.IsNullOrWhiteSpace(ProfileImageUrl))
+                    yield return new ValidationResult("Profile photo is required for Local Guides.", new[] { nameof(ProfileImageUrl) });
+                if (string.IsNullOrWhiteSpace(GuideBio))
+                    yield return new ValidationResult("Guide bio is required.", new[] { nameof(GuideBio) });
+                if (string.IsNullOrWhiteSpace(GuideCity))
+                    yield return new ValidationResult("Guide city is required.", new[] { nameof(GuideCity) });
+                if (string.IsNullOrWhiteSpace(LicenseNumber))
+                    yield return new ValidationResult("Guide license number is required.", new[] { nameof(LicenseNumber) });
             }
 
+            // ✅ Travel Agent: photo + agency + license required
             if (Role == "TravelAgent")
             {
-                if (string.IsNullOrWhiteSpace(AgencyName)) yield return new ValidationResult("Agency name is required.", new[] { nameof(AgencyName) });
-                if (string.IsNullOrWhiteSpace(AgentLicenseNumber)) yield return new ValidationResult("Agent license number is required.", new[] { nameof(AgentLicenseNumber) });
+                if (string.IsNullOrWhiteSpace(ProfileImageUrl))
+                    yield return new ValidationResult("Profile photo is required for Travel Agents.", new[] { nameof(ProfileImageUrl) });
+                if (string.IsNullOrWhiteSpace(AgencyName))
+                    yield return new ValidationResult("Agency name is required.", new[] { nameof(AgencyName) });
+                if (string.IsNullOrWhiteSpace(AgentLicenseNumber))
+                    yield return new ValidationResult("Agent license number is required.", new[] { nameof(AgentLicenseNumber) });
             }
+
+            // ✅ Traveler: NO photo required — no validation needed
         }
     }
 
@@ -83,7 +95,7 @@ namespace Backend.DTOs
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
-        public string ProfileImageUrl { get; set; } = string.Empty;
+        public string? ProfileImageUrl { get; set; }  // ✅ Nullable
         public string? AgencyName { get; set; }
         public string? AgentLicenseNumber { get; set; }
         public string Role { get; set; } = string.Empty;

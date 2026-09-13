@@ -31,10 +31,10 @@ namespace Backend.Services
             }
 
             // 2. ✅ FIXED: string comparison
-            if (request.Role == "Traveler")
+            /*if (request.Role == "Traveler")
             {
                 throw new InvalidOperationException("Traveler accounts must be created via the mobile app.");
-            }
+            }*/
 
             // 3. ✅ FIXED: string comparison
             if (request.Role == "Admin")
@@ -54,7 +54,7 @@ namespace Backend.Services
                 PhoneNumber = request.PhoneNumber.Trim(),
                 ProfileImageUrl = request.ProfileImageUrl,
                 Role = request.Role,  // ✅ Already string
-                IsActive = false,
+                IsActive = request.Role == "Traveler",  // ✅ Travelers auto-active
                 AgencyName = request.Role == "TravelAgent" ? request.AgencyName.Trim() : null,
                 AgentLicenseNumber = request.Role == "TravelAgent" ? request.AgentLicenseNumber.Trim() : null
             };

@@ -47,19 +47,34 @@ frontend/*.tsbuildinfo
 # ============================================
 # FLUTTER MOBILE
 # ============================================
+mobile/.env
+mobile/.env.local
+mobile/.dart_tool/
+mobile/.packages
 mobile/.pub-cache/
 mobile/.pub/
 mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
 mobile/*.g.dart
 mobile/*.freezed.dart
 mobile/*.reflectable.dart
+mobile/*.iml
 mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/android/app/*.keystore
+mobile/android/app/*.jks
 mobile/android/app/keystore.properties
 mobile/ios/Pods/
 mobile/ios/.symlinks/
 mobile/ios/Flutter/App.framework/
 mobile/ios/Flutter/Engine/
 mobile/ios/Flutter/ephemeral/
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/flutter_export_environment.sh
 
 # ============================================
 # PYTHON AI SERVICE
