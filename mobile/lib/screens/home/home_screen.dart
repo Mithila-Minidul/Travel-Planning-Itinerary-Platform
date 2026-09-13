@@ -11,7 +11,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+  int _currentIndex = 2; // Default to Center Home
 
   @override
   Widget build(BuildContext context) {
@@ -19,236 +19,51 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = authProvider.user;
 
     final List<Widget> pages = [
-      _buildDashboard(context, user),
-      _buildComingSoon('My Trips', Icons.flight_takeoff),
-      _buildComingSoon('My Bookings', Icons.calendar_today),
-      _buildProfile(context, user),
+      const DestinationBrowseScreen(), // Browse
+      _buildComingSoon('My Trips', Icons.flight_takeoff), // Trips
+      _buildDashboard(context, user), // Home Dashboard
+      _buildComingSoon('My Bookings', Icons.confirmation_number_outlined), // Bookings
+      _buildProfile(context, user), // Profile
     ];
 
     return Scaffold(
-      body: pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.indigo,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.flight_takeoff), label: 'Trips'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_today), label: 'Bookings'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: pages,
       ),
-    );
-  }
-
-  // ============================================
-  // DASHBOARD TAB
-  // ============================================
-  Widget _buildDashboard(BuildContext context, user) {
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(const Duration(seconds: 1));
-        },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Container(
+        height: 60,
+        width: 60,
+        margin: const EdgeInsets.only(top: 30),
+        child: FloatingActionButton(
+          elevation: 4,
+          backgroundColor: const Color(0xFF4F46E5),
+          shape: const CircleBorder(),
+          onPressed: () => setState(() => _currentIndex = 2),
+          child: Icon(
+            Icons.home_rounded,
+            color: _currentIndex == 2 ? Colors.white : Colors.white.withOpacity(0.7),
+            size: 28,
+          ),
+        ),
+      ),
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        color: Colors.white,
+        elevation: 10,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // Header
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Colors.indigo[100],
-                    backgroundImage: (user?.profileImageUrl != null &&
-                            user!.profileImageUrl!.isNotEmpty)
-                        ? NetworkImage(user.profileImageUrl!)
-                        : null,
-                    child: (user?.profileImageUrl == null ||
-                            user!.profileImageUrl!.isEmpty)
-                        ? const Icon(Icons.person, color: Colors.indigo)
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Welcome back,',
-                          style: TextStyle(fontSize: 13, color: Colors.grey),
-                        ),
-                        Text(
-                          user?.fullName ?? 'Traveler',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Stats
-              const Text(
-                'Your Overview',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildStatCard(
-                          'Trips', '0', Icons.flight, Colors.indigo)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _buildStatCard(
-                          'Bookings', '0', Icons.book, Colors.green)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildStatCard(
-                          'Budget', '\$0', Icons.attach_money, Colors.orange)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _buildStatCard(
-                          'Reviews', '0', Icons.star, Colors.purple)),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Quick Actions
-              const Text(
-                'Quick Actions',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildActionCard(
-                      context,
-                      'Browse\nDestinations',
-                      Icons.explore,
-                      Colors.blue,
-                      () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const DestinationBrowseScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionCard(
-                      context,
-                      'Create Trip\nwith AI',
-                      Icons.auto_awesome,
-                      Colors.deepPurple,
-                      () {
-                        _showComingSoon(context, 'Create Trip with AI');
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildActionCard(
-                      context,
-                      'My\nBookings',
-                      Icons.calendar_today,
-                      Colors.teal,
-                      () {
-                        _showComingSoon(context, 'My Bookings');
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionCard(
-                      context,
-                      'Write\nReview',
-                      Icons.rate_review,
-                      Colors.pink,
-                      () {
-                        _showComingSoon(context, 'Write Review');
-                      },
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Recent Trips
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Recent Trips',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text('View All'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              _buildEmptyState(
-                icon: Icons.flight_takeoff,
-                title: 'No trips yet',
-                subtitle: 'Create your first AI-powered trip!',
-              ),
-
-              const SizedBox(height: 24),
-
-              // Upcoming Bookings
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Upcoming Bookings',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text('View All'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              _buildEmptyState(
-                icon: Icons.calendar_today,
-                title: 'No bookings yet',
-                subtitle: 'Book experiences to see them here',
-              ),
-
-              const SizedBox(height: 24),
+              _buildNavItem(0, Icons.explore_outlined, Icons.explore, 'Browse'),
+              _buildNavItem(1, Icons.map_outlined, Icons.map, 'Trips'),
+              const SizedBox(width: 48), // Space for center Home FAB
+              _buildNavItem(3, Icons.confirmation_number_outlined, Icons.confirmation_number, 'Bookings'),
+              _buildNavItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
             ],
           ),
         ),
@@ -256,71 +71,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ============================================
-  // PROFILE TAB
-  // ============================================
-  Widget _buildProfile(BuildContext context, user) {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label) {
+    final isSelected = _currentIndex == index;
+    return InkWell(
+      onTap: () => setState(() => _currentIndex = index),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 20),
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.indigo[100],
-              backgroundImage: (user?.profileImageUrl != null &&
-                      user!.profileImageUrl!.isNotEmpty)
-                  ? NetworkImage(user.profileImageUrl!)
-                  : null,
-              child: (user?.profileImageUrl == null ||
-                      user!.profileImageUrl!.isEmpty)
-                  ? const Icon(Icons.person, size: 50, color: Colors.indigo)
-                  : null,
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF94A3B8),
+              size: 22,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 2),
             Text(
-              user?.fullName ?? 'Traveler',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(user?.email ?? '', style: const TextStyle(color: Colors.grey)),
-            const SizedBox(height: 8),
-            Chip(
-              label: Text(user?.role ?? 'Traveler'),
-              backgroundColor: Colors.indigo[50],
-            ),
-            const SizedBox(height: 32),
-
-            _buildProfileOption(Icons.person_outline, 'Edit Profile', () {}),
-            _buildProfileOption(Icons.lock_outline, 'Change Password', () {}),
-            _buildProfileOption(
-                Icons.notifications_outlined, 'Notifications', () {}),
-            _buildProfileOption(Icons.help_outline, 'Help & Support', () {}),
-            _buildProfileOption(Icons.info_outline, 'About App', () {}),
-
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  await authProvider.logout();
-                  if (context.mounted) {
-                    Navigator.pushReplacementNamed(context, '/login');
-                  }
-                },
-                icon: const Icon(Icons.logout, color: Colors.red),
-                label: const Text('Logout',
-                    style: TextStyle(color: Colors.red)),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: const BorderSide(color: Colors.red),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF94A3B8),
               ),
             ),
           ],
@@ -330,100 +102,207 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ============================================
-  // HELPERS
+  // DASHBOARD TAB (HOME)
   // ============================================
-  Widget _buildStatCard(
-      String label, String value, IconData icon, Color color) {
+  Widget _buildDashboard(BuildContext context, user) {
+    return SafeArea(
+      child: RefreshIndicator(
+        color: const Color(0xFF4F46E5),
+        onRefresh: () async => await Future.delayed(const Duration(seconds: 1)),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(user),
+              const SizedBox(height: 20),
+              _buildAiHeroBanner(context),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Quick Actions'),
+              const SizedBox(height: 12),
+              _buildQuickActionGrid(context),
+              const SizedBox(height: 24),
+              _buildSectionHeader('Recent Trips', () {}),
+              const SizedBox(height: 12),
+              _buildTripCard(),
+              const SizedBox(height: 24),
+              _buildSectionHeader('Upcoming Bookings', () {}),
+              const SizedBox(height: 12),
+              _buildBookingCard(),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(user) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 22,
+          backgroundColor: const Color(0xFFEEF2FF),
+          backgroundImage: (user?.profileImageUrl != null && user!.profileImageUrl!.isNotEmpty)
+              ? NetworkImage(user.profileImageUrl!)
+              : null,
+          child: (user?.profileImageUrl == null || user!.profileImageUrl!.isEmpty)
+              ? const Icon(Icons.person, color: Color(0xFF4F46E5))
+              : null,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome back 👋',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              Text(
+                user?.fullName ?? 'Traveler',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.notifications_outlined, color: Color(0xFF334155)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiHeroBanner(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
+          const Text(
+            'Plan Your Next Trip with AI',
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 12),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 22, fontWeight: FontWeight.bold)),
-          Text(label,
-              style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionCard(BuildContext context, String label, IconData icon,
-      Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: color,
-                height: 1.2,
-              ),
+          const SizedBox(height: 6),
+          Text(
+            'Generate itineraries verified by travel agents.',
+            style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF4F46E5),
             ),
-          ],
+            child: const Text('Create Itinerary'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionGrid(BuildContext context) {
+    return Row(
+      children: [
+        _buildActionTile('Explore', Icons.compass_calibration_rounded, () => setState(() => _currentIndex = 0)),
+        const SizedBox(width: 10),
+        _buildActionTile('Plan AI', Icons.auto_awesome_rounded, () {}),
+        const SizedBox(width: 10),
+        _buildActionTile('Bookings', Icons.calendar_month_rounded, () => setState(() => _currentIndex = 3)),
+      ],
+    );
+  }
+
+  Widget _buildActionTile(String title, IconData icon, VoidCallback onTap) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: const Color(0xFF4F46E5), size: 22),
+              const SizedBox(height: 6),
+              Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
+  Widget _buildTripCard() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Column(
+      child: const Row(
         children: [
-          Icon(icon, size: 40, color: Colors.grey[400]),
-          const SizedBox(height: 8),
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey)),
-          const SizedBox(height: 4),
-          Text(subtitle,
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-              textAlign: TextAlign.center),
+          Icon(Icons.flight_takeoff, color: Color(0xFF4F46E5)),
+          SizedBox(width: 12),
+          Text('No active trips created yet', style: TextStyle(color: Color(0xFF64748B))),
         ],
       ),
     );
+  }
+
+  Widget _buildBookingCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.confirmation_number_outlined, color: Color(0xFF10B981)),
+          SizedBox(width: 12),
+          Text('No active bookings', style: TextStyle(color: Color(0xFF64748B))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold));
+  }
+
+  Widget _buildSectionHeader(String title, VoidCallback onViewAll) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        GestureDetector(
+          onTap: onViewAll,
+          child: const Text('View All', style: TextStyle(color: Color(0xFF4F46E5), fontWeight: FontWeight.w600)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfile(BuildContext context, user) {
+    return const SafeArea(child: Center(child: Text('Profile Screen')));
   }
 
   Widget _buildComingSoon(String title, IconData icon) {
@@ -432,36 +311,11 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Text('Coming soon...',
-                style: TextStyle(color: Colors.grey)),
+            Icon(icon, size: 48, color: const Color(0xFF94A3B8)),
+            const SizedBox(height: 12),
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildProfileOption(
-      IconData icon, String label, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.indigo),
-      title: Text(label),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: onTap,
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature - Coming soon!'),
-        backgroundColor: Colors.indigo,
-        duration: const Duration(seconds: 2),
       ),
     );
   }
