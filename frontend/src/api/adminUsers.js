@@ -7,4 +7,7 @@ export const adminUserAPI = {
   // Updates the IsActive status (true = Approve, false = Reject/Disable)
   updateAgentStatus: (id, isActive) => 
     apiClient.patch(`/AdminUsers/travel-agents/${id}/status`, { isActive }),
+
+  // ✅ ADD THIS: Fetches all Travelers
+  getTravelers: () => apiClient.get('/AdminUsers/travelers'),
 };

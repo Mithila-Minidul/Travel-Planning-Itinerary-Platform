@@ -109,7 +109,7 @@ const GuidesPage = () => {
 
       {/* All Guides */}
       <h2 className="text-lg font-semibold text-gray-700 mb-3">
-        All Guides ({guides.length})
+        All Guides ({approvedGuides.length})
       </h2>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {approvedGuides.map((guide) => (

@@ -47,6 +47,28 @@ namespace Backend.Controllers
 
             return Ok(agents);
         }
+                /// <summary>
+        /// Get all registered Travelers (Auto-approved, just for viewing)
+        /// </summary>
+        [HttpGet("travelers")]
+        public async Task<IActionResult> GetTravelers()
+        {
+            var travelers = await _context.Users
+                .Where(u => u.Role == "Traveler")
+                .Select(u => new UserProfileDto
+                {
+                    Id = u.Id,
+                    FullName = u.FullName,
+                    Email = u.Email,
+                    PhoneNumber = u.PhoneNumber,
+                    ProfileImageUrl = u.ProfileImageUrl,
+                    Role = u.Role.ToString(),
+                    IsActive = u.IsActive
+                })
+                .ToListAsync();
+
+            return Ok(travelers);
+        }
 
         /// <summary>
         /// Admin approves or disables a Travel Agent account

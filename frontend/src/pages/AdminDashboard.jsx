@@ -28,6 +28,9 @@ const AdminDashboard = () => {
     experiences: [],
     guides: [],
     agents: [],
+    travelers: [],
+    approvedGuidesCount: 0,
+    approvedAgentsCount: 0,
     pendingGuides: 0,
     pendingAgents: 0,
     pendingExperiences: 0,
@@ -37,22 +40,30 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [destRes, expRes, guideRes, pendingExpRes, agentRes] = await Promise.all([
+        const [destRes, expRes, guideRes, pendingExpRes, agentRes, travelerRes] = await Promise.all([
           destinationAPI.getAll(),
           experienceAPI.getForAdmin(),
           guideAPI.getAll(),
           experienceAPI.getPending(),
           adminUserAPI.getTravelAgents(),
+          adminUserAPI.getTravelers(),
         ]);
 
         const guides = guideRes.data || [];
         const agents = agentRes.data || [];
+        const travelers = travelerRes.data || [];
+
+        const approvedGuidesCount = guides.filter((guide) => guide.status === 'Approved').length;
+        const approvedAgentsCount = agents.filter((agent) => agent.isActive === true).length;
 
         setAdminData({
           destinations: destRes.data || [],
           experiences: expRes.data || [],
           guides,
           agents,
+          travelers,
+          approvedGuidesCount,
+          approvedAgentsCount,
           pendingGuides: guides.filter((guide) => guide.status === 'Pending').length,
           pendingAgents: agents.filter((agent) => !agent.isActive).length,
           pendingExperiences: pendingExpRes.data?.length || 0,
@@ -79,11 +90,35 @@ const AdminDashboard = () => {
   const adminApprovedExperiences = adminData.experiences.filter((experience) => experience.status === 'Approved').length;
 
   const adminStatCards = [
-    { label: 'Registered Users', value: 0, detail: 'User directory pending', icon: <Group />, color: 'bg-indigo-600' },
+    { 
+      label: 'Registered Users', 
+      value: adminData.travelers.length + adminData.approvedGuidesCount + adminData.approvedAgentsCount, // ✅ UPDATED
+      detail: `${adminData.travelers.length} travelers`, 
+      icon: <Group />, 
+      color: 'bg-indigo-600' 
+    },
     { label: 'Bookings', value: 0, detail: 'Pending: 0', icon: <BookOnline />, color: 'bg-amber-500' },
     { label: 'Revenue', value: '$0', detail: 'This month', icon: <AttachMoney />, color: 'bg-emerald-600' },
     { label: 'Experiences', value: adminApprovedExperiences, detail: `${adminData.destinations.length} destinations`, icon: <Tour />, color: 'bg-sky-600' },
   ];
+
+    // ✅ ADD THIS: Calculate dynamic pie chart data
+  const totalUsers = adminData.approvedGuidesCount + adminData.approvedAgentsCount + adminData.travelers.length;
+
+  let guidePercent = 0;
+  let agentPercent = 0;
+  let travelerPercent = 0;
+
+  if (totalUsers > 0) {
+    guidePercent = (adminData.approvedGuidesCount / totalUsers) * 100;
+    agentPercent = (adminData.approvedAgentsCount / totalUsers) * 100;
+    travelerPercent = (adminData.travelers.length / totalUsers) * 100;
+  }
+
+  // Build the dynamic gradient string
+  const pieChartStyle = totalUsers > 0 
+    ? { background: `conic-gradient(#4f46e5 0% ${guidePercent}%, #10b981 ${guidePercent}% ${guidePercent + agentPercent}%, #f59e0b ${guidePercent + agentPercent}% 100%)` }
+    : { background: '#e2e8f0' }; // Fallback grey circle if there are 0 users
 
   if (loading) return <div className="flex justify-center items-center h-64">Loading dashboard...</div>;
 
@@ -161,8 +196,8 @@ const AdminDashboard = () => {
           </div>
           <div className="rounded-xl border bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center gap-2"><PieChart className="text-fuchsia-600" /><h2 className="font-semibold text-slate-900">User Overview</h2></div>
-            <div className="mx-auto mb-4 h-28 w-28 rounded-full" style={{ background: 'conic-gradient(#4f46e5 0 33%, #10b981 33% 66%, #f59e0b 66% 100%)' }} />
-            <div className="flex justify-center gap-3 text-xs text-slate-500"><span>Guides {adminData.guides.length}</span><span>Agents {adminData.agents?.length || 0}</span><span>Travelers 0</span></div>
+            <div className="mx-auto mb-4 h-28 w-28 rounded-full" style={pieChartStyle} />
+            <div className="flex justify-center gap-3 text-xs text-slate-500"><span>Guides {adminData.approvedGuidesCount}</span><span>Agents {adminData.approvedAgentsCount}</span><span>Travelers {adminData.travelers?.length || 0}</span></div>
           </div>
           <div className="rounded-xl border bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center gap-2"><Notifications className="text-amber-600" /><h2 className="font-semibold text-slate-900">Recent Activity</h2></div>
