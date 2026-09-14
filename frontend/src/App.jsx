@@ -17,6 +17,7 @@ import GuidesPage from './pages/GuidesPage';
 import AIReviewPage from './pages/AIReviewPage';
 import MyExperiencesPage from './pages/MyExperiencesPage';
 import ExperienceForm from './components/experiences/ExperienceForm';
+import TravelAgentsPage from './pages/TravelAgentsPage';
 
 function App() {
   return (
@@ -80,6 +81,11 @@ function App() {
             <Route path="/my-experiences" element={
               <ProtectedRoute allowedRoles={['LocalGuide']}>
                 <MyExperiencesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/travel-agents" element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <TravelAgentsPage />
               </ProtectedRoute>
             } />
           </Route>

@@ -522,7 +522,7 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                       ),
                     ),
                     child: const Text(
-                      'Book Now',
+                      'Create Trip with AI',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.white,

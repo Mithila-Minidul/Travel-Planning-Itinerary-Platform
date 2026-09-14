@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { destinationAPI } from '../api/destinations';
 import { experienceAPI } from '../api/experiences';
 import { guideAPI } from '../api/guides';
+import { adminUserAPI } from '../api/adminUsers';
 import {
   Add,
   AddLocationAlt,
@@ -32,7 +33,9 @@ const DashboardPage = () => {
     destinations: [],
     experiences: [],
     guides: [],
+    agents: [],
     pendingGuides: 0,
+    pendingAgents: 0,
     pendingExperiences: 0,
   });
   const [guideExperiences, setGuideExperiences] = useState([]);
@@ -41,19 +44,26 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        if (isAdmin) {
-          const [destRes, expRes, guideRes, pendingExpRes] = await Promise.all([
+                if (isAdmin) {
+          // ✅ Added agentRes to the destructuring
+          const [destRes, expRes, guideRes, pendingExpRes, agentRes] = await Promise.all([
             destinationAPI.getAll(),
             experienceAPI.getForAdmin(),
             guideAPI.getAll(),
             experienceAPI.getPending(),
+            adminUserAPI.getTravelAgents(), 
           ]);
+          
           const guides = guideRes.data || [];
+          const agents = agentRes.data || []; // ✅ Define agents
+          
           setAdminData({
             destinations: destRes.data || [],
             experiences: expRes.data || [],
             guides,
+            agents, // ✅ Store agents
             pendingGuides: guides.filter((guide) => guide.status === 'Pending').length,
+            pendingAgents: agents.filter((agent) => !agent.isActive).length, // ✅ Count pending agents
             pendingExperiences: pendingExpRes.data?.length || 0,
           });
         } else if (isLocalGuide) {
@@ -181,7 +191,7 @@ const DashboardPage = () => {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {[
                   { label: 'Guides', value: adminData.pendingGuides },
-                  { label: 'Agents', value: 0 },
+                  { label: 'Agents', value: adminData.pendingAgents || 0 },
                   { label: 'Experiences', value: adminData.pendingExperiences },
                 ].map((item) => (
                   <div key={item.label} className="rounded-lg border border-amber-200 bg-white px-4 py-3">
@@ -223,7 +233,7 @@ const DashboardPage = () => {
               <div className="rounded-xl border bg-white p-6 shadow-sm">
                 <div className="mb-4 flex items-center gap-2"><PieChart className="text-fuchsia-600" /><h2 className="font-semibold text-slate-900">User Overview</h2></div>
                 <div className="mx-auto mb-4 h-28 w-28 rounded-full" style={{ background: 'conic-gradient(#4f46e5 0 33%, #10b981 33% 66%, #f59e0b 66% 100%)' }} />
-                <div className="flex justify-center gap-3 text-xs text-slate-500"><span>Guides {adminData.guides.length}</span><span>Agents 0</span><span>Travelers 0</span></div>
+                <div className="flex justify-center gap-3 text-xs text-slate-500"><span>Guides {adminData.guides.length}</span><span>Agents {adminData.agents?.length || 0}</span><span>Travelers 0</span></div>
               </div>
               <div className="rounded-xl border bg-white p-6 shadow-sm">
                 <div className="mb-4 flex items-center gap-2"><Notifications className="text-amber-600" /><h2 className="font-semibold text-slate-900">Recent Activity</h2></div>
