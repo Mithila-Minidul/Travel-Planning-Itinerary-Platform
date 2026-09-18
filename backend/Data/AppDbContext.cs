@@ -10,15 +10,22 @@ namespace Backend.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+        // ── Member 1 DbSets ────────────────────────────────────────────────────
         public DbSet<User> Users => Set<User>();
         public DbSet<LocalGuide> LocalGuides => Set<LocalGuide>();
         public DbSet<Destination> Destinations => Set<Destination>();
         public DbSet<Category> Categories => Set<Category>();
         public DbSet<Experience> Experiences => Set<Experience>();
 
+        // ── Member 2 DbSets ────────────────────────────────────────────────────
+        public DbSet<Trip> Trips => Set<Trip>();
+        public DbSet<TripStop> TripStops => Set<TripStop>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // ── Member 1 configurations (unchanged) ───────────────────────────
 
             modelBuilder.Entity<User>(entity =>
             {
@@ -51,6 +58,54 @@ namespace Backend.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // ── Member 2 configurations ───────────────────────────────────────
+
+            // Trip: one User (Traveler) → many Trips
+            // Restrict so deleting a User does not silently cascade-delete trip history.
+            modelBuilder.Entity<Trip>(entity =>
+            {
+                entity.HasOne(t => t.Traveler)
+                      .WithMany()
+                      .HasForeignKey(t => t.TravelerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Index for fetching all trips belonging to a traveler
+                entity.HasIndex(t => t.TravelerId);
+
+                // Composite index for status-filtered traveler queries
+                entity.HasIndex(t => new { t.TravelerId, t.Status });
+            });
+
+            // TripStop: one Trip → many TripStops (cascade — stops have no
+            // meaning outside their parent trip)
+            modelBuilder.Entity<TripStop>(entity =>
+            {
+                entity.HasOne(s => s.Trip)
+                      .WithMany(t => t.Stops)
+                      .HasForeignKey(s => s.TripId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // TripStop → Destination (reuse existing Destination table;
+                // no new ICollection on Destination so WithMany has no argument)
+                entity.HasOne(s => s.Destination)
+                      .WithMany()
+                      .HasForeignKey(s => s.DestinationId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // TripStop → Experience (optional FK; reuse existing Experience
+                // table; no new ICollection on Experience)
+                entity.HasOne(s => s.Experience)
+                      .WithMany()
+                      .HasForeignKey(s => s.ExperienceId)
+                      .IsRequired(false)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Index for loading all stops of a trip in order
+                entity.HasIndex(s => s.TripId);
+
+                // Composite index — most common query: stops for a trip sorted
+                entity.HasIndex(s => new { s.TripId, s.StopOrder });
+            });
 
             // Seed Admin & Default categories
             SeedInitialData(modelBuilder);
