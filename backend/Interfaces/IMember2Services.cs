@@ -92,9 +92,27 @@ namespace Backend.Interfaces
        }
 
     public interface ITripValidationService
-    {
-
-    }
+     {
+            /// <summary>
+            /// Validates a Trip's itinerary using deterministic business rules.
+            /// Loads the Trip and all active TripStops from the database.
+            /// Throws KeyNotFoundException if the trip does not exist.
+            ///
+            /// Rules applied:
+            ///   R01 – Trip StartDate must be before EndDate.
+            ///   R02 – Every TripStop must have StopOrder >= 1.
+            ///   R03 – No two TripStops may share the same StopOrder.
+            ///   R04 – If both PlannedArrival and PlannedDeparture are set on a stop,
+            ///          Arrival must be before Departure.
+            ///   R05 – PlannedArrival (when set) must be >= Trip StartDate.
+            ///   R06 – PlannedDeparture (when set) must be <= Trip EndDate.
+            ///   R07 – Overlap detection: two stops conflict when their time windows
+            ///          intersect (A.Arrival &lt; B.Departure AND B.Arrival &lt; A.Departure).
+            ///   R08 – Chronological order: a stop with a lower StopOrder must depart
+            ///          before or at the arrival of the next chronologically ordered stop.
+            /// </summary>
+            Task<TripValidationResult> ValidateTripAsync(Guid tripId);
+        }
 
     public interface ITravelTimeService
     {
