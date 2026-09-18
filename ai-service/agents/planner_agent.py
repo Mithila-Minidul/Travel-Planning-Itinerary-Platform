@@ -12,21 +12,6 @@ from models.schemas import (
 
 
 class PlannerAgent:
-    """
-    Member 2 Agent.
-
-    This agent is deliberately different from Member 1's Research Agent:
-      1. It decomposes a trip into ordered stops.
-      2. It delegates destination research to the existing Research Agent.
-      3. It selects an experience when a stop has no experience.
-      4. It builds a day-by-day schedule.
-      5. ASP.NET Core performs the authoritative deterministic validation
-         after the proposed schedule is persisted.
-
-    The response is a structured business object; no hidden chain-of-thought is
-    persisted or returned.
-    """
-
     def __init__(self):
         self.research_agent = ResearchAgent()
 
@@ -146,9 +131,6 @@ class PlannerAgent:
                 )
 
             except Exception:
-                # Safe failure: one destination failing does not erase the
-                # complete trip; the backend receives a warning and validates
-                # the final result before approval.
                 warnings.append(
                     f"Research was unavailable for {stop.destination_name}; "
                     "the existing stop details were retained."
@@ -162,10 +144,6 @@ class PlannerAgent:
                     )
                 )
 
-        # Step 2: allocate stops across trip days.
-        # Four planning slots/day keeps the generated itinerary readable and
-        # leaves buffer time for travel. Google travel-time validation is done
-        # authoritatively by the ASP.NET Core service after this step.
         slots_per_day = 4
         plan = []
 
@@ -179,9 +157,6 @@ class PlannerAgent:
 
             day_date = start.date() + timedelta(days=day_index)
 
-            # Keep all generated datetimes in the same timezone as the
-            # trip start/end values. This prevents ASP.NET Core from shifting
-            # naive local times when converting them to UTC.
             if day_index == 0:
                 day_start = datetime.combine(
                     day_date,
@@ -224,7 +199,6 @@ class PlannerAgent:
                 else 2.0
             )
 
-            # Cap a single generated activity to keep the schedule usable.
             duration = max(
                 1.0,
                 min(duration, 4.0),
@@ -234,13 +208,10 @@ class PlannerAgent:
                 hours=duration
             )
 
-            # Do not allow the generated activity to extend beyond
-            # the trip end time.
             if departure > end:
                 departure = end
 
-            # If there is not enough time remaining in the trip,
-            # skip this stop safely and report a warning.
+
             if departure <= arrival:
                 warnings.append(
                     f"Insufficient time to schedule "
@@ -325,13 +296,7 @@ class PlannerAgent:
 
     @staticmethod
     def _parse_datetime(value: str) -> datetime:
-        """
-        Parse ISO-8601 datetime while preserving timezone information.
 
-        The previous implementation removed tzinfo, which could cause
-        generated itinerary times to be shifted when ASP.NET Core converted
-        them to UTC.
-        """
         return datetime.fromisoformat(
             value.replace("Z", "+00:00")
         )
