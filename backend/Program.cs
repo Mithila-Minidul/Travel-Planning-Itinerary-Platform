@@ -8,12 +8,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
-// 1. Load .env file
 DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 2. Build PostgreSQL Connection String from .env
 var dbHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
 var dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
 var dbName = Environment.GetEnvironmentVariable("DB_NAME") ?? "travel_agentic_db";
@@ -29,25 +27,26 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             maxRetryDelay: TimeSpan.FromSeconds(10),
             errorCodesToAdd: null)));
 
-// 3. Register Application Services
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHttpClient<IWeatherService, WeatherService>();
+builder.Services.AddHttpClient<Backend.Interfaces.ITravelTimeService, Backend.Services.TravelTimeService>();
 builder.Services.AddScoped<ImageUploadService>();
 
-// Member 1 Service Registrations
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IDestinationService, DestinationService>();
 builder.Services.AddScoped<ILocalGuideService, LocalGuideService>();
 builder.Services.AddScoped<IExperienceService, ExperienceService>();
 
-builder.Services.AddScoped<ITripService, TripService>();
-builder.Services.AddScoped<ITripStopService, TripStopService>();
-builder.Services.AddScoped<ITripValidationService, TripValidationService>();
-builder.Services.AddScoped<ITravelTimeService, TravelTimeService>();
+builder.Services.AddScoped<Backend.Interfaces.ITripService, Backend.Services.TripService>();
+builder.Services.AddScoped<Backend.Interfaces.ITripStopService, Backend.Services.TripStopService>();
+builder.Services.AddScoped<Backend.Interfaces.ITripValidationService, Backend.Services.TripValidationService>();
+builder.Services.AddHttpClient<Backend.Interfaces.IAiItineraryService, Backend.Services.AiItineraryService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(90);
+});
 
-// 4. Configure JWT Authentication
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") 
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
     ?? "SuperSecretKeyForSE3090Assignment2026MustBeAtLeast32CharsLong!";
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "TravelAppBackend";
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "TravelAppClients";
@@ -79,7 +78,6 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
-// 5. Configure CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -90,7 +88,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 6. Configure Swagger with JWT Support
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
