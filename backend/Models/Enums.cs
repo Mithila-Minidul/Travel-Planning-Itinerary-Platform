@@ -31,4 +31,14 @@ namespace Backend.Models
         Peak = 1,
         OffPeak = 2
     }
+
+     public enum TripStatus
+        {
+            Draft = 0,
+            Generating = 1,
+            PendingReview = 2,
+            Approved = 3,
+            Rejected = 4,
+            RevisionRequested = 5
+        }
 }
