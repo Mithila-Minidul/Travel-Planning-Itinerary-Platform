@@ -115,7 +115,20 @@ namespace Backend.Interfaces
         }
 
     public interface ITravelTimeService
-    {
-
-    }
+        {
+            /// <summary>
+            /// Returns travel time and distance between two coordinate pairs.
+            ///
+            /// When the Google Maps API key is configured and the call succeeds,
+            /// the result has IsAvailable = true and real duration/distance data.
+            ///
+            /// When the key is absent, the external call fails, or times out,
+            /// the result has IsAvailable = false and a FallbackMessage explaining
+            /// why real data is unavailable. The controller must surface this flag
+            /// rather than an error so the frontend can degrade gracefully.
+            ///
+            /// The API key is NEVER returned to the caller.
+            /// </summary>
+            Task<TravelTimeResponseDto> GetTravelTimeAsync(TravelTimeRequestDto request);
+        }
 }
