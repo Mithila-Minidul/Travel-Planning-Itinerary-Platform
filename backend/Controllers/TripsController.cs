@@ -30,7 +30,7 @@ namespace Backend.Controllers
         }
 
 
-        [Authorize(Roles = "TravelAgent,Admin")]
+        [Authorize(Roles = "TravelAgent,Admin,Traveler")]
         [HttpGet]
         public async Task<IActionResult> GetTrips()
         {
@@ -38,21 +38,38 @@ namespace Backend.Controllers
             {
                 if (User.IsInRole("Admin"))
                 {
-                    return Ok(await _tripService.GetAllForAdminAsync());
+                    return Ok(
+                        await _tripService.GetAllForAdminAsync());
+                }
+
+                if (User.IsInRole("TravelAgent"))
+                {
+                    return Ok(
+                        await _tripService.GetAllForTravelAgentAsync());
                 }
 
                 if (!TryGetUserId(out var userId))
-                    return Unauthorized(new { message = "Invalid token claims." });
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Invalid token claims."
+                    });
+                }
 
-                return Ok(await _tripService.GetByTravelerAsync(userId));
+                return Ok(
+                    await _tripService.GetByTravelerAsync(userId));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while retrieving trips.", details = ex.Message });
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving trips.",
+                    details = ex.Message
+                });
             }
         }
 
-          [Authorize(Roles = ",Admin")]
+          [Authorize(Roles = "Traveler,Admin,TravelAgent")]
                 [HttpGet("{id:guid}")]
                 public async Task<IActionResult> GetById(Guid id)
                 {
@@ -61,8 +78,14 @@ namespace Backend.Controllers
                         if (!TryGetUserId(out var userId))
                             return Unauthorized(new { message = "Invalid token claims." });
 
-                        bool isAdmin = User.IsInRole("Admin");
-                        var trip = await _tripService.GetByIdAsync(id, userId, isAdmin);
+                        bool canViewAll =
+                            User.IsInRole("Admin") ||
+                            User.IsInRole("TravelAgent");
+
+                        var trip = await _tripService.GetByIdAsync(
+                            id,
+                            userId,
+                            canViewAll);
                         return Ok(trip);
                     }
                     catch (KeyNotFoundException ex)
@@ -79,7 +102,7 @@ namespace Backend.Controllers
                     }
                 }
 
-                [Authorize(Roles = "TravelAgent")]
+                [Authorize(Roles = "TravelAgent, Traveler")]
                         [HttpPost]
                         public async Task<IActionResult> Create([FromBody] TripCreateDto dto)
                         {
