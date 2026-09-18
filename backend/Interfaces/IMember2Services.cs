@@ -45,9 +45,51 @@ namespace Backend.Interfaces
     }
 
     public interface ITripStopService
-    {
+       {
+           /// <summary>
+           /// Returns all stops for a trip, ordered by StopOrder.
+           /// Throws KeyNotFoundException if the trip does not exist or is not active.
+           /// Throws UnauthorizedAccessException if the trip does not belong to travelerId
+           /// and isAdmin is false.
+           /// </summary>
+           Task<IEnumerable<TripStopResponseDto>> GetByTripAsync(Guid tripId, Guid travelerId, bool isAdmin = false);
 
-    }
+           /// <summary>
+           /// Returns a single stop.
+           /// Ownership verified via TripStop → Trip → TravelerId.
+           /// Throws KeyNotFoundException if not found.
+           /// Throws UnauthorizedAccessException if the stop's trip does not belong to travelerId
+           /// and isAdmin is false.
+           /// </summary>
+           Task<TripStopResponseDto> GetByIdAsync(Guid stopId, Guid travelerId, bool isAdmin = false);
+
+           /// <summary>
+           /// Adds a stop to a trip owned by travelerId.
+           /// Validates that the destination exists.
+           /// If ExperienceId is provided, validates the experience is Approved.
+           /// Throws KeyNotFoundException if trip, destination, or experience not found.
+           /// Throws InvalidOperationException if the trip is not in Draft status.
+           /// Throws UnauthorizedAccessException if the trip does not belong to travelerId.
+           /// </summary>
+           Task<TripStopResponseDto> CreateAsync(Guid tripId, Guid travelerId, TripStopCreateDto dto);
+
+           /// <summary>
+           /// Updates an existing stop on a trip owned by travelerId.
+           /// Validates destination and optional experience same as CreateAsync.
+           /// Throws KeyNotFoundException if stop not found.
+           /// Throws InvalidOperationException if the trip is not in Draft status.
+           /// Throws UnauthorizedAccessException if ownership fails.
+           /// </summary>
+           Task<TripStopResponseDto> UpdateAsync(Guid stopId, Guid travelerId, TripStopUpdateDto dto);
+
+           /// <summary>
+           /// Hard-deletes a stop.
+           /// Ownership verified via TripStop → Trip → TravelerId.
+           /// Throws KeyNotFoundException if stop not found.
+           /// Throws UnauthorizedAccessException if ownership fails.
+           /// </summary>
+           Task DeleteAsync(Guid stopId, Guid travelerId);
+       }
 
     public interface ITripValidationService
     {
