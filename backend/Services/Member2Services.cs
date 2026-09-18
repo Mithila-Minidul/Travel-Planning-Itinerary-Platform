@@ -442,4 +442,352 @@ namespace Backend.Services
             }
         }
 
+       public class TripValidationService : ITripValidationService
+         {
+             private readonly AppDbContext _context;
+             private readonly ITravelTimeService _travelTimeService;
+
+             public TripValidationService(
+                 AppDbContext context,
+                 ITravelTimeService travelTimeService)
+             {
+                 _context = context;
+                 _travelTimeService = travelTimeService;
+             }
+
+             public async Task<TripValidationResult> ValidateTripAsync(Guid tripId)
+             {
+                 // Load trip with all active stops and their destination names.
+                 var trip = await _context.Trips
+                     .Include(t => t.Stops)
+                         .ThenInclude(s => s.Destination)
+                     .FirstOrDefaultAsync(t => t.Id == tripId && t.IsActive);
+
+                 if (trip == null)
+                     throw new KeyNotFoundException("Trip not found.");
+
+                 var result = new TripValidationResult();
+                 var stops = trip.Stops
+                     .Where(s => s.IsActive)
+                     .OrderBy(s => s.StopOrder)
+                     .ToList();
+
+                 // ── R01: Trip date range ────────────────────────────────────────
+                 if (trip.StartDate >= trip.EndDate)
+                 {
+                     result.Errors.Add(new ValidationIssue
+                     {
+                         Code = "INVALID_TRIP_DATE_RANGE",
+                         Message = $"Trip StartDate ({trip.StartDate:yyyy-MM-dd}) must be before EndDate ({trip.EndDate:yyyy-MM-dd}).",
+                         Field = "StartDate"
+                     });
+                 }
+
+                 // ── R02: Every stop must have StopOrder >= 1 ────────────────────
+                 foreach (var stop in stops.Where(s => s.StopOrder < 1))
+                 {
+                     result.Errors.Add(new ValidationIssue
+                     {
+                         Code = "INVALID_STOP_ORDER",
+                         Message = $"Stop '{DestName(stop)}' has an invalid StopOrder ({stop.StopOrder}). Must be 1 or greater.",
+                         StopId = stop.Id,
+                         StopOrder = stop.StopOrder,
+                         Field = "StopOrder"
+                     });
+                 }
+
+                 // ── R03: No duplicate StopOrder values ──────────────────────────
+                 var orderGroups = stops
+                     .GroupBy(s => s.StopOrder)
+                     .Where(g => g.Count() > 1);
+
+                 foreach (var group in orderGroups)
+                 {
+                     var names = string.Join(", ", group.Select(s => $"'{DestName(s)}'"));
+                     result.Errors.Add(new ValidationIssue
+                     {
+                         Code = "DUPLICATE_STOP_ORDER",
+                         Message = $"Multiple stops share StopOrder {group.Key}: {names}. Each stop must have a unique order.",
+                         StopOrder = group.Key,
+                         Field = "StopOrder"
+                     });
+                 }
+
+                 // ── Per-stop time rules (R04, R05, R06) ────────────────────────
+                 foreach (var stop in stops)
+                 {
+                     var hasArrival = stop.PlannedArrival.HasValue;
+                     var hasDeparture = stop.PlannedDeparture.HasValue;
+
+                     // R04: Arrival must be before Departure when both are set.
+                     if (hasArrival && hasDeparture && stop.PlannedArrival!.Value >= stop.PlannedDeparture!.Value)
+                     {
+                         result.Errors.Add(new ValidationIssue
+                         {
+                             Code = "ARRIVAL_AFTER_DEPARTURE",
+                             Message = $"Stop '{DestName(stop)}' (order {stop.StopOrder}): " +
+                                       $"PlannedArrival ({stop.PlannedArrival.Value:yyyy-MM-dd HH:mm}) " +
+                                       $"must be before PlannedDeparture ({stop.PlannedDeparture.Value:yyyy-MM-dd HH:mm}).",
+                             StopId = stop.Id,
+                             StopOrder = stop.StopOrder,
+                             Field = "PlannedArrival"
+                         });
+                     }
+
+                     // R05: Arrival must be within trip bounds.
+                     if (hasArrival && stop.PlannedArrival!.Value < trip.StartDate)
+                     {
+                         result.Errors.Add(new ValidationIssue
+                         {
+                             Code = "ARRIVAL_BEFORE_TRIP_START",
+                             Message = $"Stop '{DestName(stop)}' (order {stop.StopOrder}): " +
+                                       $"PlannedArrival ({stop.PlannedArrival.Value:yyyy-MM-dd HH:mm}) " +
+                                       $"is before the trip start date ({trip.StartDate:yyyy-MM-dd}).",
+                             StopId = stop.Id,
+                             StopOrder = stop.StopOrder,
+                             Field = "PlannedArrival"
+                         });
+                     }
+
+                     // R06: Departure must be within trip bounds.
+                     if (hasDeparture && stop.PlannedDeparture!.Value > trip.EndDate)
+                     {
+                         result.Errors.Add(new ValidationIssue
+                         {
+                             Code = "DEPARTURE_AFTER_TRIP_END",
+                             Message = $"Stop '{DestName(stop)}' (order {stop.StopOrder}): " +
+                                       $"PlannedDeparture ({stop.PlannedDeparture.Value:yyyy-MM-dd HH:mm}) " +
+                                       $"is after the trip end date ({trip.EndDate:yyyy-MM-dd}).",
+                             StopId = stop.Id,
+                             StopOrder = stop.StopOrder,
+                             Field = "PlannedDeparture"
+                         });
+                     }
+
+                     // Warning: stop has no times at all (advisory only — not an error).
+                     if (!hasArrival && !hasDeparture)
+                     {
+                         result.Warnings.Add(new ValidationIssue
+                         {
+                             Code = "STOP_HAS_NO_TIMES",
+                             Message = $"Stop '{DestName(stop)}' (order {stop.StopOrder}) has no PlannedArrival or PlannedDeparture. " +
+                                       "Adding times will enable overlap detection.",
+                             StopId = stop.Id,
+                             StopOrder = stop.StopOrder,
+                             Field = "PlannedArrival"
+                         });
+                     }
+                 }
+
+                 // ── R07: Overlap detection — O(n²) over active stops ───────────
+                 // Only evaluate pairs where both stops have complete time windows.
+                 var timedStops = stops
+                     .Where(s => s.PlannedArrival.HasValue && s.PlannedDeparture.HasValue)
+                     .ToList();
+
+                 for (int i = 0; i < timedStops.Count; i++)
+                 {
+                     for (int j = i + 1; j < timedStops.Count; j++)
+                     {
+                         var a = timedStops[i];
+                         var b = timedStops[j];
+
+                         // Standard interval-overlap test: A.arrival < B.departure AND B.arrival < A.departure
+                         bool overlaps =
+                             a.PlannedArrival!.Value  < b.PlannedDeparture!.Value &&
+                             b.PlannedArrival!.Value  < a.PlannedDeparture!.Value;
+
+                         if (overlaps)
+                         {
+                             result.Conflicts.Add(new StopConflict
+                             {
+                                 StopAId = a.Id,
+                                 StopAOrder = a.StopOrder,
+                                 StopADestination = DestName(a),
+                                 StopBId = b.Id,
+                                 StopBOrder = b.StopOrder,
+                                 StopBDestination = DestName(b),
+                                 Message =
+                                     $"Stop '{DestName(a)}' (order {a.StopOrder}, " +
+                                     $"{a.PlannedArrival!.Value:HH:mm}–{a.PlannedDeparture!.Value:HH:mm}) " +
+                                     $"overlaps with stop '{DestName(b)}' (order {b.StopOrder}, " +
+                                     $"{b.PlannedArrival!.Value:HH:mm}–{b.PlannedDeparture!.Value:HH:mm})."
+                             });
+                         }
+                     }
+                 }
+
+                 // ── R08: Chronological order vs StopOrder ───────────────────────
+                 // For consecutive StopOrder pairs where both have full time data:
+                 // the earlier-ordered stop's departure must be <= the later-ordered stop's arrival.
+                 // Only evaluate stops where StopOrder values are unique (skip if R03 already fired).
+                 var orderedTimedStops = timedStops
+                     .OrderBy(s => s.StopOrder)
+                     .ToList();
+
+                 for (int i = 0; i < orderedTimedStops.Count - 1; i++)
+                 {
+                     var earlier = orderedTimedStops[i];
+                     var later   = orderedTimedStops[i + 1];
+
+                     // Departure of the earlier-ordered stop is after the arrival of the later-ordered stop.
+                     if (earlier.PlannedDeparture!.Value > later.PlannedArrival!.Value)
+                     {
+                         result.Warnings.Add(new ValidationIssue
+                         {
+                             Code = "CHRONOLOGICAL_ORDER_MISMATCH",
+                             Message =
+                                 $"Stop '{DestName(earlier)}' (order {earlier.StopOrder}) departs at " +
+                                 $"{earlier.PlannedDeparture.Value:yyyy-MM-dd HH:mm} but the next stop " +
+                                 $"'{DestName(later)}' (order {later.StopOrder}) arrives at " +
+                                 $"{later.PlannedArrival.Value:yyyy-MM-dd HH:mm}, " +
+                                 "which is earlier. Check whether the stop order reflects the intended travel sequence.",
+                             StopId = later.Id,
+                             StopOrder = later.StopOrder,
+                             Field = "StopOrder"
+                         });
+                     }
+                 }
+
+                 // ── R09: Travel-time check between consecutive stops ──────────────────
+                 // For each consecutive (by StopOrder) pair where:
+                 //   • Stop A has PlannedDeparture (the window start)
+                 //   • Stop B has PlannedArrival   (the window end)
+                 //   • Both stops have a Destination with non-zero coordinates
+                 // Ask ITravelTimeService for the driving duration and compare:
+                 //   A.PlannedDeparture + EstimatedTravelDuration <= B.PlannedArrival
+                 // If the estimate exceeds the window → StopConflict.
+                 // If the API is unavailable → Warning (not an error; trip is not penalised).
+                 for (int i = 0; i < orderedTimedStops.Count - 1; i++)
+                 {
+                     var stopA = orderedTimedStops[i];
+                     var stopB = orderedTimedStops[i + 1];
+
+                     // Both must have the relevant time endpoints.
+                     if (!stopA.PlannedDeparture.HasValue || !stopB.PlannedArrival.HasValue)
+                         continue;
+
+                     // Both destinations must have coordinates (non-zero lat and lng).
+                     var coordsA = DestCoords(stopA);
+                     var coordsB = DestCoords(stopB);
+                     if (coordsA == null || coordsB == null)
+                         continue;
+
+                     // Available travel window (may be zero or negative — R08 already catches that).
+                     var availableWindow = stopB.PlannedArrival!.Value - stopA.PlannedDeparture!.Value;
+
+                     // Call the travel-time service — never throws; returns IsAvailable=false on failure.
+                     TravelTimeResponseDto travelTime;
+                     try
+                     {
+                         travelTime = await _travelTimeService.GetTravelTimeAsync(
+                             new TravelTimeRequestDto
+                             {
+                                 OriginLatitude       = coordsA.Value.Lat,
+                                 OriginLongitude      = coordsA.Value.Lng,
+                                 DestinationLatitude  = coordsB.Value.Lat,
+                                 DestinationLongitude = coordsB.Value.Lng,
+                                 Mode                 = "driving"
+                             });
+                     }
+                     catch (Exception ex)
+                     {
+                         // Defensive: service contract says never throw, but protect the
+                         // validation pipeline regardless.
+                         result.Warnings.Add(new ValidationIssue
+                         {
+                             Code    = "TRAVEL_TIME_API_UNAVAILABLE",
+                             Message = $"Travel-time check between '{DestName(stopA)}' (order {stopA.StopOrder}) " +
+                                       $"and '{DestName(stopB)}' (order {stopB.StopOrder}) could not be completed: " +
+                                       ex.Message,
+                             StopId    = stopB.Id,
+                             StopOrder = stopB.StopOrder,
+                             Field     = "PlannedArrival"
+                         });
+                         continue;
+                     }
+
+                     if (!travelTime.IsAvailable)
+                     {
+                         // External API not configured or temporarily down — advisory warning only.
+                         result.Warnings.Add(new ValidationIssue
+                         {
+                             Code    = "TRAVEL_TIME_API_UNAVAILABLE",
+                             Message = $"Travel-time check between '{DestName(stopA)}' (order {stopA.StopOrder}) " +
+                                       $"and '{DestName(stopB)}' (order {stopB.StopOrder}) could not be completed. " +
+                                       (travelTime.FallbackMessage ?? "Travel-time data is temporarily unavailable."),
+                             StopId    = stopB.Id,
+                             StopOrder = stopB.StopOrder,
+                             Field     = "PlannedArrival"
+                         });
+                         continue;
+                     }
+
+                     // Compare estimated duration against available window.
+                     var estimatedDuration = TimeSpan.FromSeconds(travelTime.DurationSeconds);
+                     if (estimatedDuration > availableWindow)
+                     {
+                         result.Conflicts.Add(new StopConflict
+                         {
+                             StopAId          = stopA.Id,
+                             StopAOrder       = stopA.StopOrder,
+                             StopADestination = DestName(stopA),
+                             StopBId          = stopB.Id,
+                             StopBOrder       = stopB.StopOrder,
+                             StopBDestination = DestName(stopB),
+                             Message =
+                                 $"Insufficient travel time between '{DestName(stopA)}' (order {stopA.StopOrder}) " +
+                                 $"and '{DestName(stopB)}' (order {stopB.StopOrder}). " +
+                                 $"Estimated travel: {travelTime.DurationText} ({travelTime.DurationSeconds}s). " +
+                                 $"Available window: {FormatDuration(availableWindow)} " +
+                                 $"({stopA.PlannedDeparture!.Value:HH:mm} → {stopB.PlannedArrival!.Value:HH:mm}). " +
+                                 "Adjust departure or arrival times to allow sufficient transit time."
+                         });
+                     }
+                 }
+
+                 // Warning: trip has no stops at all.
+                 if (!stops.Any())
+                 {
+                     result.Warnings.Add(new ValidationIssue
+                     {
+                         Code = "TRIP_HAS_NO_STOPS",
+                         Message = "This trip has no stops yet. Add at least one destination before submitting."
+                     });
+                 }
+
+                 // IsValid is true only when there are no errors and no conflicts.
+                 result.IsValid = !result.Errors.Any() && !result.Conflicts.Any();
+
+                 return result;
+             }
+
+             // ── Private helpers ────────────────────────────────────────────────────
+
+             private static string DestName(TripStop stop) =>
+                 stop.Destination?.Name ?? stop.DestinationId.ToString();
+
+             /// <summary>
+             /// Extracts (Lat, Lng) from a stop's Destination.
+             /// Returns null when the Destination is not loaded or has no meaningful coordinates
+             /// (both zero is treated as "no coordinates" — a safe heuristic since (0,0) is
+             /// in the ocean and not a valid travel origin/destination for this platform).
+             /// </summary>
+             private static (double Lat, double Lng)? DestCoords(TripStop stop)
+             {
+                 var d = stop.Destination;
+                 if (d == null) return null;
+                 if (d.Latitude == 0 && d.Longitude == 0) return null;
+                 return (d.Latitude, d.Longitude);
+             }
+
+             /// <summary>Formats a TimeSpan as a human-readable duration string.</summary>
+             private static string FormatDuration(TimeSpan ts)
+             {
+                 if (ts.TotalMinutes < 1)  return $"{(int)ts.TotalSeconds}s";
+                 if (ts.TotalHours   < 1)  return $"{(int)ts.TotalMinutes} min";
+                 return $"{(int)ts.TotalHours}h {ts.Minutes}min";
+             }
+         }
+
 }
