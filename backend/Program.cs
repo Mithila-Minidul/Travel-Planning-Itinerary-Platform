@@ -41,6 +41,11 @@ builder.Services.AddScoped<IDestinationService, DestinationService>();
 builder.Services.AddScoped<ILocalGuideService, LocalGuideService>();
 builder.Services.AddScoped<IExperienceService, ExperienceService>();
 
+builder.Services.AddScoped<ITripService, TripService>();
+builder.Services.AddScoped<ITripStopService, TripStopService>();
+builder.Services.AddScoped<ITripValidationService, TripValidationService>();
+builder.Services.AddScoped<ITravelTimeService, TravelTimeService>();
+
 // 4. Configure JWT Authentication
 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") 
     ?? "SuperSecretKeyForSE3090Assignment2026MustBeAtLeast32CharsLong!";
