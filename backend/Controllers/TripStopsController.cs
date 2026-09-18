@@ -84,5 +84,95 @@ namespace Backend.Controllers
                         }
                     }
 
+
+        [Authorize(Roles = "Traveler")]
+        [HttpPost]
+        public async Task<IActionResult> Create(Guid tripId, [FromBody] TripStopCreateDto dto)
+        {
+            try
+            {
+                if (!TryGetUserId(out var userId))
+                    return Unauthorized(new { message = "Invalid token claims." });
+
+                var result = await _tripStopService.CreateAsync(tripId, userId, dto);
+                return StatusCode(201, result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while creating the trip stop.", details = ex.Message });
+            }
+        }
+
+
+        [Authorize(Roles = "Traveler")]
+        [HttpPut("{stopId:guid}")]
+        public async Task<IActionResult> Update(Guid tripId, Guid stopId, [FromBody] TripStopUpdateDto dto)
+        {
+            try
+            {
+                if (!TryGetUserId(out var userId))
+                    return Unauthorized(new { message = "Invalid token claims." });
+
+                var result = await _tripStopService.UpdateAsync(stopId, userId, dto);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while updating the trip stop.", details = ex.Message });
+            }
+        }
+
+
+        [Authorize(Roles = "Traveler")]
+        [HttpDelete("{stopId:guid}")]
+        public async Task<IActionResult> Delete(Guid tripId, Guid stopId)
+        {
+            try
+            {
+                if (!TryGetUserId(out var userId))
+                    return Unauthorized(new { message = "Invalid token claims." });
+
+                await _tripStopService.DeleteAsync(stopId, userId);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while deleting the trip stop.", details = ex.Message });
+            }
+        }
+
+
     }
 }
