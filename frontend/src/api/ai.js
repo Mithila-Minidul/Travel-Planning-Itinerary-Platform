@@ -1,11 +1,30 @@
 import apiClient from './client';
 
 export const aiAPI = {
-  // AI Workflow endpoints (to be built by other members)
-  // This is the skeleton for Member 2, 3, 4 to implement
-  triggerItinerary: (data) => apiClient.post('/ai/generate-itinerary', data),
-  getWorkflow: (id) => apiClient.get(`/ai/workflows/${id}`),
-  approve: (id) => apiClient.put(`/ai/workflows/${id}/approve`),
-  reject: (id, reason) => apiClient.put(`/ai/workflows/${id}/reject`, { reason }),
-  getLogs: (id) => apiClient.get(`/ai/execution-logs/${id}`),
+  generateItinerary: (tripId) =>
+      apiClient.post('/ai/generate-itinerary', { tripId }),
+
+  getWorkflow: (id) =>
+      apiClient.get(`/ai/workflows/${id}`),
+
+  getLatestForTrip: (tripId) =>
+      apiClient.get(`/ai/trips/${tripId}/latest`),
+
+  getPending: () =>
+      apiClient.get('/ai/workflows/pending'),
+
+  editItinerary: (id, data) =>
+      apiClient.put(`/ai/workflows/${id}/itinerary`, data),
+
+  approve: (id, notes = '') =>
+      apiClient.put(`/ai/workflows/${id}/approve`, { notes }),
+
+  reject: (id, reason) =>
+      apiClient.put(`/ai/workflows/${id}/reject`, { notes: reason }),
+
+  requestRevision: (id, notes) =>
+      apiClient.put(`/ai/workflows/${id}/revise`, { notes }),
+
+  getLogs: (id) =>
+      apiClient.get(`/ai/execution-logs/${id}`),
 };
