@@ -47,7 +47,7 @@ namespace Backend.Data
                 $"Host={host};Port={port};Database={database};" +
                 $"Username={user};Password={password};" +
                 $"Timeout=60;Command Timeout=60;" +
-                $"SSL Mode=Require;Trust Server Certificate=true;";
+                $"SSL Mode=Disable;Trust Server Certificate=true;";
 
             var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
             optionsBuilder.UseNpgsql(connectionString);
