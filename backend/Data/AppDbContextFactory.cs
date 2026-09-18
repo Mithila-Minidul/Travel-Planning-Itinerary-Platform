@@ -7,15 +7,11 @@ using Microsoft.Extensions.Configuration;
 
 namespace Backend.Data
 {
-    /// <summary>
-    /// Design-time factory for EF Core CLI commands (migrations).
-    /// This runs BEFORE Program.cs, so it loads .env manually.
-    /// </summary>
+
     public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
     {
         public AppDbContext CreateDbContext(string[] args)
         {
-            // Load .env file manually (since Program.cs is not run by EF CLI)
             var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
             
             if (File.Exists(envPath))
@@ -36,7 +32,6 @@ namespace Backend.Data
                 }
             }
 
-            // Build connection string from environment variables
             var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
             var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
             var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "postgres";
