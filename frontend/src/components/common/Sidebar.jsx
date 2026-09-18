@@ -19,7 +19,7 @@ import {
 
 const Sidebar = () => {
   const location = useLocation();
-  const { isAdmin, isAgent, isLocalGuide } = useAuth();
+  const { isAdmin, isAgent, isLocalGuide, isTraveler } = useAuth();
 
   const isActive = (path) => location.pathname === path;
 
@@ -58,6 +58,14 @@ const Sidebar = () => {
       { label: 'Add Experience', icon: <Group />, path: '/experiences/new' },
       { label: 'My Bookings', icon: <Verified />, path: '/bookings' },
       { label: 'Reviews & Ratings', icon: <RateReview />, path: '/reviews-ratings' },
+    );
+  }
+
+  // Traveler items
+  if (isTraveler) {
+    menuItems.push(
+        { label: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
+        { label: 'My Trips', icon: <Luggage />, path: '/trips' },
     );
   }
 
