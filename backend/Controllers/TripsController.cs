@@ -28,5 +28,56 @@ namespace Backend.Controllers
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return !string.IsNullOrEmpty(claim) && Guid.TryParse(claim, out userId);
         }
+
+
+        [Authorize(Roles = "TravelAgent,Admin")]
+        [HttpGet]
+        public async Task<IActionResult> GetTrips()
+        {
+            try
+            {
+                if (User.IsInRole("Admin"))
+                {
+                    return Ok(await _tripService.GetAllForAdminAsync());
+                }
+
+                if (!TryGetUserId(out var userId))
+                    return Unauthorized(new { message = "Invalid token claims." });
+
+                return Ok(await _tripService.GetByTravelerAsync(userId));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving trips.", details = ex.Message });
+            }
+        }
+
+          [Authorize(Roles = ",Admin")]
+                [HttpGet("{id:guid}")]
+                public async Task<IActionResult> GetById(Guid id)
+                {
+                    try
+                    {
+                        if (!TryGetUserId(out var userId))
+                            return Unauthorized(new { message = "Invalid token claims." });
+
+                        bool isAdmin = User.IsInRole("Admin");
+                        var trip = await _tripService.GetByIdAsync(id, userId, isAdmin);
+                        return Ok(trip);
+                    }
+                    catch (KeyNotFoundException ex)
+                    {
+                        return NotFound(new { message = ex.Message });
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        return StatusCode(403, new { message = ex.Message });
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, new { message = "An error occurred while retrieving the trip.", details = ex.Message });
+                    }
+                }
+
     }
 }
