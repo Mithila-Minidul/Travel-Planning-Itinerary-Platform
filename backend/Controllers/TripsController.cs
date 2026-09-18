@@ -171,5 +171,44 @@ namespace Backend.Controllers
                         }
 
 
+                        [Authorize(Roles = "Traveler,Admin")]
+                                [HttpPost("{id:guid}/validate")]
+                                public async Task<IActionResult> Validate(Guid id)
+                                {
+                                    try
+                                    {
+                                        if (!TryGetUserId(out var userId))
+                                            return Unauthorized(new { message = "Invalid token claims." });
+
+                                        // Step 1: Verify the trip exists and the caller owns it.
+                                        // Reuses existing ITripService ownership logic — throws
+                                        // KeyNotFoundException or UnauthorizedAccessException when appropriate.
+                                        bool isAdmin = User.IsInRole("Admin");
+                                        await _tripService.GetByIdAsync(id, userId, isAdmin);
+
+                                        // Step 2: Run deterministic validation via ITripValidationService.
+                                        // No business logic in the controller — all rules live in the service.
+                                        var validationResult = await _validationService.ValidateTripAsync(id);
+
+                                        // Step 3: Always return 200 OK with the structured result.
+                                        // The caller inspects IsValid, Errors, Warnings, and Conflicts.
+                                        return Ok(validationResult);
+                                    }
+                                    catch (KeyNotFoundException ex)
+                                    {
+                                        return NotFound(new { message = ex.Message });
+                                    }
+                                    catch (UnauthorizedAccessException ex)
+                                    {
+                                        return StatusCode(403, new { message = ex.Message });
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        return StatusCode(500, new { message = "An error occurred while validating the trip.", details = ex.Message });
+                                    }
+                                }
+
+
+
     }
 }
