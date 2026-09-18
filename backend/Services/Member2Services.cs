@@ -15,13 +15,6 @@ namespace Backend.Services
             private readonly AppDbContext _context;
             public TripService(AppDbContext context) => _context = context;
 
-            // ── Private helpers ────────────────────────────────────────────────────
-
-            /// <summary>
-            /// Base query: active trips with Traveler + Stops (including Destination
-            /// and optional Experience per stop) eagerly loaded.
-            /// Mirrors the pattern used by ExperienceService's Include chain.
-            /// </summary>
             private IQueryable<Trip> TripsWithDetails()
             {
                 return _context.Trips
@@ -33,10 +26,6 @@ namespace Backend.Services
                     .Where(t => t.IsActive);
             }
 
-            /// <summary>
-            /// Maps a Trip entity to TripResponseDto.
-            /// Stops are sorted by StopOrder ascending for consistent ordering.
-            /// </summary>
             private static TripResponseDto MapToDto(Trip trip)
             {
                 return new TripResponseDto
@@ -72,17 +61,11 @@ namespace Backend.Services
                 };
             }
 
-            /// <summary>
-            /// Validates that EndDate is after StartDate.
-            /// Mirrors the pattern of ValidateAvailability in ExperienceService.
-            /// </summary>
             private static void ValidateDateRange(DateTime startDate, DateTime endDate)
             {
                 if (endDate <= startDate)
                     throw new InvalidOperationException("End date must be after start date.");
             }
-
-            // ── Public interface implementation ────────────────────────────────────
 
             public async Task<IEnumerable<TripResponseDto>> GetByTravelerAsync(Guid travelerId)
             {
@@ -111,9 +94,6 @@ namespace Backend.Services
                 if (trip == null)
                     throw new KeyNotFoundException("Trip not found.");
 
-                // Ownership check: non-admin callers may only see their own trips.
-                // Mirrors the pattern: FirstOrDefaultAsync(e => e.Id == id && e.GuideId == guideId)
-                // but done post-load to give a consistent "not found" vs "forbidden" response.
                 if (!isAdmin && trip.TravelerId != travelerId)
                     throw new UnauthorizedAccessException("You do not have permission to view this trip.");
 
@@ -124,7 +104,6 @@ namespace Backend.Services
             {
                 ValidateDateRange(dto.StartDate, dto.EndDate);
 
-                // Verify the traveler user exists and is active.
                 var traveler = await _context.Users
                     .FirstOrDefaultAsync(u => u.Id == travelerId && u.IsActive);
 
@@ -144,22 +123,17 @@ namespace Backend.Services
 
                 _context.Trips.Add(trip);
                 await _context.SaveChangesAsync();
-
-                // Re-load with full navigation properties for the response.
                 return await GetByIdAsync(trip.Id, travelerId);
             }
 
             public async Task<TripResponseDto> UpdateAsync(Guid travelerId, Guid id, TripUpdateDto dto)
             {
-                // Ownership enforced by including travelerId in the query predicate —
-                // exactly the same approach as ExperienceService.UpdateAsync(guideId, id, dto).
                 var trip = await _context.Trips
                     .FirstOrDefaultAsync(t => t.Id == id && t.TravelerId == travelerId && t.IsActive);
 
                 if (trip == null)
                     throw new KeyNotFoundException("Trip not found.");
 
-                // Only Draft trips may be edited by the traveler.
                 if (trip.Status != TripStatus.Draft)
                     throw new InvalidOperationException(
                         "Only trips in Draft status can be edited. " +
@@ -180,21 +154,18 @@ namespace Backend.Services
 
             public async Task DeleteAsync(Guid travelerId, Guid id)
             {
-                // Ownership enforced by predicate — same pattern as ExperienceService.DeleteAsync.
                 var trip = await _context.Trips
                     .FirstOrDefaultAsync(t => t.Id == id && t.TravelerId == travelerId && t.IsActive);
 
                 if (trip == null)
                     throw new KeyNotFoundException("Trip not found.");
 
-                // Soft delete: set IsActive = false — mirrors DestinationService.DeleteAsync.
                 trip.IsActive = false;
                 await _context.SaveChangesAsync();
             }
 
             public async Task DeleteByAdminAsync(Guid id)
             {
-                // Admin bypass — no ownership check, same pattern as ExperienceService.DeleteByAdminAsync.
                 var trip = await _context.Trips
                     .FirstOrDefaultAsync(t => t.Id == id);
 
@@ -211,13 +182,6 @@ namespace Backend.Services
             private readonly AppDbContext _context;
             public TripStopService(AppDbContext context) => _context = context;
 
-            // ── Private helpers ────────────────────────────────────────────────────
-
-            /// <summary>
-            /// Base query: active TripStops with all navigation properties loaded.
-            /// The parent Trip (and its Traveler) is included so ownership can be
-            /// verified without a second round-trip.
-            /// </summary>
             private IQueryable<TripStop> StopsWithDetails()
             {
                 return _context.TripStops
@@ -228,7 +192,6 @@ namespace Backend.Services
                     .Where(s => s.IsActive);
             }
 
-            /// <summary>Maps a TripStop entity to TripStopResponseDto.</summary>
             private static TripStopResponseDto MapToDto(TripStop s)
             {
                 return new TripStopResponseDto
@@ -248,11 +211,6 @@ namespace Backend.Services
                 };
             }
 
-            /// <summary>
-            /// Verifies trip ownership: TripStop → Trip.TravelerId == travelerId.
-            /// Throws UnauthorizedAccessException when the caller is not the owner
-            /// and isAdmin is false.
-            /// </summary>
             private static void EnforceOwnership(TripStop stop, Guid travelerId, bool isAdmin)
             {
                 if (!isAdmin && stop.Trip.TravelerId != travelerId)
@@ -260,10 +218,6 @@ namespace Backend.Services
                         "You do not have permission to access this trip stop.");
             }
 
-            /// <summary>
-            /// Validates that the destination exists.
-            /// Throws KeyNotFoundException when not found.
-            /// </summary>
             private async Task<Destination> RequireDestinationAsync(Guid destinationId)
             {
                 var dest = await _context.Destinations
@@ -276,12 +230,6 @@ namespace Backend.Services
                 return dest;
             }
 
-            /// <summary>
-            /// Validates that the experience exists and is Approved.
-            /// Only called when ExperienceId is non-null.
-            /// Throws KeyNotFoundException when not found.
-            /// Throws InvalidOperationException when not Approved.
-            /// </summary>
             private async Task RequireApprovedExperienceAsync(Guid experienceId)
             {
                 var exp = await _context.Experiences
@@ -296,10 +244,6 @@ namespace Backend.Services
                         "Only Approved experiences can be added to a trip stop.");
             }
 
-            /// <summary>
-            /// Asserts the parent trip is in Draft status.
-            /// Throws InvalidOperationException when it is not.
-            /// </summary>
             private static void RequireDraftTrip(Trip trip)
             {
                 if (trip.Status != TripStatus.Draft)
@@ -307,12 +251,9 @@ namespace Backend.Services
                         "Trip stops can only be added or modified on trips in Draft status.");
             }
 
-            // ── Public interface implementation ────────────────────────────────────
-
             public async Task<IEnumerable<TripStopResponseDto>> GetByTripAsync(
                 Guid tripId, Guid travelerId, bool isAdmin = false)
             {
-                // Verify the parent trip exists and enforce ownership in one query.
                 var trip = await _context.Trips
                     .FirstOrDefaultAsync(t => t.Id == tripId && t.IsActive);
 
@@ -348,7 +289,6 @@ namespace Backend.Services
             public async Task<TripStopResponseDto> CreateAsync(
                 Guid tripId, Guid travelerId, TripStopCreateDto dto)
             {
-                // Load parent trip with ownership check.
                 var trip = await _context.Trips
                     .FirstOrDefaultAsync(t => t.Id == tripId && t.IsActive);
 
@@ -361,14 +301,11 @@ namespace Backend.Services
 
                 RequireDraftTrip(trip);
 
-                // Validate destination.
                 await RequireDestinationAsync(dto.DestinationId);
 
-                // Validate optional experience.
                 if (dto.ExperienceId.HasValue)
                     await RequireApprovedExperienceAsync(dto.ExperienceId.Value);
 
-                // Auto-assign StopOrder if caller did not provide one.
                 int stopOrder = dto.StopOrder ?? (
                     await _context.TripStops
                         .Where(s => s.TripId == tripId && s.IsActive)
@@ -389,14 +326,12 @@ namespace Backend.Services
                 _context.TripStops.Add(stop);
                 await _context.SaveChangesAsync();
 
-                // Re-load with full navigations for the response.
                 return await GetByIdAsync(stop.Id, travelerId);
             }
 
             public async Task<TripStopResponseDto> UpdateAsync(
                 Guid stopId, Guid travelerId, TripStopUpdateDto dto)
             {
-                // Load the stop with its parent trip to enable ownership + status checks.
                 var stop = await StopsWithDetails()
                     .FirstOrDefaultAsync(s => s.Id == stopId);
 
@@ -406,10 +341,8 @@ namespace Backend.Services
                 EnforceOwnership(stop, travelerId, isAdmin: false);
                 RequireDraftTrip(stop.Trip);
 
-                // Validate destination.
                 await RequireDestinationAsync(dto.DestinationId);
 
-                // Validate optional experience.
                 if (dto.ExperienceId.HasValue)
                     await RequireApprovedExperienceAsync(dto.ExperienceId.Value);
 
@@ -435,8 +368,6 @@ namespace Backend.Services
 
                 EnforceOwnership(stop, travelerId, isAdmin: false);
 
-                // Hard delete — TripStop has no independent life outside its Trip.
-                // On cascaded Trip delete EF will remove all stops anyway.
                 _context.TripStops.Remove(stop);
                 await _context.SaveChangesAsync();
             }
@@ -457,7 +388,7 @@ namespace Backend.Services
 
              public async Task<TripValidationResult> ValidateTripAsync(Guid tripId)
              {
-                 // Load trip with all active stops and their destination names.
+
                  var trip = await _context.Trips
                      .Include(t => t.Stops)
                          .ThenInclude(s => s.Destination)
@@ -472,7 +403,6 @@ namespace Backend.Services
                      .OrderBy(s => s.StopOrder)
                      .ToList();
 
-                 // ── R01: Trip date range ────────────────────────────────────────
                  if (trip.StartDate >= trip.EndDate)
                  {
                      result.Errors.Add(new ValidationIssue
@@ -483,7 +413,6 @@ namespace Backend.Services
                      });
                  }
 
-                 // ── R02: Every stop must have StopOrder >= 1 ────────────────────
                  foreach (var stop in stops.Where(s => s.StopOrder < 1))
                  {
                      result.Errors.Add(new ValidationIssue
@@ -496,7 +425,6 @@ namespace Backend.Services
                      });
                  }
 
-                 // ── R03: No duplicate StopOrder values ──────────────────────────
                  var orderGroups = stops
                      .GroupBy(s => s.StopOrder)
                      .Where(g => g.Count() > 1);
@@ -513,13 +441,11 @@ namespace Backend.Services
                      });
                  }
 
-                 // ── Per-stop time rules (R04, R05, R06) ────────────────────────
                  foreach (var stop in stops)
                  {
                      var hasArrival = stop.PlannedArrival.HasValue;
                      var hasDeparture = stop.PlannedDeparture.HasValue;
 
-                     // R04: Arrival must be before Departure when both are set.
                      if (hasArrival && hasDeparture && stop.PlannedArrival!.Value >= stop.PlannedDeparture!.Value)
                      {
                          result.Errors.Add(new ValidationIssue
@@ -534,7 +460,6 @@ namespace Backend.Services
                          });
                      }
 
-                     // R05: Arrival must be within trip bounds.
                      if (hasArrival && stop.PlannedArrival!.Value < trip.StartDate)
                      {
                          result.Errors.Add(new ValidationIssue
@@ -549,7 +474,6 @@ namespace Backend.Services
                          });
                      }
 
-                     // R06: Departure must be within trip bounds.
                      if (hasDeparture && stop.PlannedDeparture!.Value > trip.EndDate)
                      {
                          result.Errors.Add(new ValidationIssue
@@ -564,7 +488,6 @@ namespace Backend.Services
                          });
                      }
 
-                     // Warning: stop has no times at all (advisory only — not an error).
                      if (!hasArrival && !hasDeparture)
                      {
                          result.Warnings.Add(new ValidationIssue
@@ -579,8 +502,6 @@ namespace Backend.Services
                      }
                  }
 
-                 // ── R07: Overlap detection — O(n²) over active stops ───────────
-                 // Only evaluate pairs where both stops have complete time windows.
                  var timedStops = stops
                      .Where(s => s.PlannedArrival.HasValue && s.PlannedDeparture.HasValue)
                      .ToList();
@@ -592,7 +513,6 @@ namespace Backend.Services
                          var a = timedStops[i];
                          var b = timedStops[j];
 
-                         // Standard interval-overlap test: A.arrival < B.departure AND B.arrival < A.departure
                          bool overlaps =
                              a.PlannedArrival!.Value  < b.PlannedDeparture!.Value &&
                              b.PlannedArrival!.Value  < a.PlannedDeparture!.Value;
@@ -617,10 +537,6 @@ namespace Backend.Services
                      }
                  }
 
-                 // ── R08: Chronological order vs StopOrder ───────────────────────
-                 // For consecutive StopOrder pairs where both have full time data:
-                 // the earlier-ordered stop's departure must be <= the later-ordered stop's arrival.
-                 // Only evaluate stops where StopOrder values are unique (skip if R03 already fired).
                  var orderedTimedStops = timedStops
                      .OrderBy(s => s.StopOrder)
                      .ToList();
@@ -630,7 +546,6 @@ namespace Backend.Services
                      var earlier = orderedTimedStops[i];
                      var later   = orderedTimedStops[i + 1];
 
-                     // Departure of the earlier-ordered stop is after the arrival of the later-ordered stop.
                      if (earlier.PlannedDeparture!.Value > later.PlannedArrival!.Value)
                      {
                          result.Warnings.Add(new ValidationIssue
@@ -649,34 +564,21 @@ namespace Backend.Services
                      }
                  }
 
-                 // ── R09: Travel-time check between consecutive stops ──────────────────
-                 // For each consecutive (by StopOrder) pair where:
-                 //   • Stop A has PlannedDeparture (the window start)
-                 //   • Stop B has PlannedArrival   (the window end)
-                 //   • Both stops have a Destination with non-zero coordinates
-                 // Ask ITravelTimeService for the driving duration and compare:
-                 //   A.PlannedDeparture + EstimatedTravelDuration <= B.PlannedArrival
-                 // If the estimate exceeds the window → StopConflict.
-                 // If the API is unavailable → Warning (not an error; trip is not penalised).
                  for (int i = 0; i < orderedTimedStops.Count - 1; i++)
                  {
                      var stopA = orderedTimedStops[i];
                      var stopB = orderedTimedStops[i + 1];
 
-                     // Both must have the relevant time endpoints.
                      if (!stopA.PlannedDeparture.HasValue || !stopB.PlannedArrival.HasValue)
                          continue;
 
-                     // Both destinations must have coordinates (non-zero lat and lng).
                      var coordsA = DestCoords(stopA);
                      var coordsB = DestCoords(stopB);
                      if (coordsA == null || coordsB == null)
                          continue;
 
-                     // Available travel window (may be zero or negative — R08 already catches that).
                      var availableWindow = stopB.PlannedArrival!.Value - stopA.PlannedDeparture!.Value;
 
-                     // Call the travel-time service — never throws; returns IsAvailable=false on failure.
                      TravelTimeResponseDto travelTime;
                      try
                      {
@@ -692,8 +594,7 @@ namespace Backend.Services
                      }
                      catch (Exception ex)
                      {
-                         // Defensive: service contract says never throw, but protect the
-                         // validation pipeline regardless.
+
                          result.Warnings.Add(new ValidationIssue
                          {
                              Code    = "TRAVEL_TIME_API_UNAVAILABLE",
@@ -709,7 +610,6 @@ namespace Backend.Services
 
                      if (!travelTime.IsAvailable)
                      {
-                         // External API not configured or temporarily down — advisory warning only.
                          result.Warnings.Add(new ValidationIssue
                          {
                              Code    = "TRAVEL_TIME_API_UNAVAILABLE",
@@ -723,7 +623,6 @@ namespace Backend.Services
                          continue;
                      }
 
-                     // Compare estimated duration against available window.
                      var estimatedDuration = TimeSpan.FromSeconds(travelTime.DurationSeconds);
                      if (estimatedDuration > availableWindow)
                      {
@@ -746,7 +645,6 @@ namespace Backend.Services
                      }
                  }
 
-                 // Warning: trip has no stops at all.
                  if (!stops.Any())
                  {
                      result.Warnings.Add(new ValidationIssue
@@ -756,23 +654,16 @@ namespace Backend.Services
                      });
                  }
 
-                 // IsValid is true only when there are no errors and no conflicts.
                  result.IsValid = !result.Errors.Any() && !result.Conflicts.Any();
 
                  return result;
              }
 
-             // ── Private helpers ────────────────────────────────────────────────────
 
              private static string DestName(TripStop stop) =>
                  stop.Destination?.Name ?? stop.DestinationId.ToString();
 
-             /// <summary>
-             /// Extracts (Lat, Lng) from a stop's Destination.
-             /// Returns null when the Destination is not loaded or has no meaningful coordinates
-             /// (both zero is treated as "no coordinates" — a safe heuristic since (0,0) is
-             /// in the ocean and not a valid travel origin/destination for this platform).
-             /// </summary>
+
              private static (double Lat, double Lng)? DestCoords(TripStop stop)
              {
                  var d = stop.Destination;
@@ -781,7 +672,6 @@ namespace Backend.Services
                  return (d.Latitude, d.Longitude);
              }
 
-             /// <summary>Formats a TimeSpan as a human-readable duration string.</summary>
              private static string FormatDuration(TimeSpan ts)
              {
                  if (ts.TotalMinutes < 1)  return $"{(int)ts.TotalSeconds}s";
