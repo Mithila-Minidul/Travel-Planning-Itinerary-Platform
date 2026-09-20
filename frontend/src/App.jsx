@@ -19,6 +19,8 @@ import MyExperiencesPage from './pages/MyExperiencesPage';
 import ExperienceForm from './components/experiences/ExperienceForm';
 import TravelAgentsPage from './pages/TravelAgentsPage';
 import TravelersPage from './pages/TravelersPage';
+import TripsPage from './pages/TripsPage';
+import TripDetailPage from './pages/TripDetailPage';
 
 function App() {
   return (
@@ -92,6 +94,16 @@ function App() {
             <Route path="/travelers" element={
               <ProtectedRoute allowedRoles={['Admin']}>
                 <TravelersPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/trips" element={
+              <ProtectedRoute allowedRoles={['Admin', 'TravelAgent', 'Traveler']}>
+                <TripsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/trips/:id" element={
+              <ProtectedRoute allowedRoles={['Admin', 'TravelAgent', 'Traveler']}>
+                <TripDetailPage />
               </ProtectedRoute>
             } />
           </Route>
