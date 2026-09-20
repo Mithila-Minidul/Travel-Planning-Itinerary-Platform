@@ -15,6 +15,8 @@ namespace Backend.Data
         public DbSet<Destination> Destinations => Set<Destination>();
         public DbSet<Category> Categories => Set<Category>();
         public DbSet<Experience> Experiences => Set<Experience>();
+        public DbSet<Trip> Trips => Set<Trip>();
+        public DbSet<TripStop> TripStops => Set<TripStop>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
