@@ -17,6 +17,14 @@ class ApiConstants {
   static const String imageUpload = '/Image/upload';
 }
 
+ static const String trips = '/Trips';
+
+  static const String generateItinerary = '/ai/generate-itinerary';
+  static const String aiWorkflows = '/ai/workflows';
+  static const String aiTripLatest = '/ai/trips';
+  static const String aiExecutionLogs = '/ai/execution-logs';
+}
+
 class StorageKeys {
   static const String token = 'auth_token';
   static const String user = 'user_data';
