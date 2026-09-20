@@ -9,6 +9,10 @@ namespace Backend.Models
         public Guid TripId { get; set; }
         public Trip Trip { get; set; } = null!;
 
+        // ✅ NEW - Link to a real Experience (so Traveler can "Book Now" on it)
+        public Guid? ExperienceId { get; set; }
+        public Experience? Experience { get; set; }
+
         [Required]
         public int DayNumber { get; set; }
 

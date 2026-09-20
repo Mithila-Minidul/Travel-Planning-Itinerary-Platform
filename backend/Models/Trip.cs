@@ -12,6 +12,10 @@ namespace Backend.Models
         [MaxLength(1000)]
         public string Objective { get; set; } = string.Empty;
 
+        // ✅ NEW - comma-separated interests, e.g. "Hiking,Nature,Culture"
+        [MaxLength(500)]
+        public string Interests { get; set; } = string.Empty;
+
         [Required]
         public DateTime StartDate { get; set; }
 
@@ -28,10 +32,15 @@ namespace Backend.Models
         [Required, MaxLength(50)]
         public string Status { get; set; } = "Pending";
 
-        // Foreign Keys
+        // ✅ NEW - Destination FK
+        public Guid DestinationId { get; set; }
+        public Destination Destination { get; set; } = null!;
+
+        // Traveler who created the trip
         public Guid TravelerId { get; set; }
         public User Traveler { get; set; } = null!;
 
+        // Travel Agent who reviewed it (nullable until reviewed)
         public Guid? TravelAgentId { get; set; }
         public User? TravelAgent { get; set; }
 
