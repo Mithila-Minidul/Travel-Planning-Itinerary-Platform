@@ -22,11 +22,13 @@ namespace Backend.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // ---------- USER ----------
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasIndex(u => u.Email).IsUnique();
             });
 
+            // ---------- LOCAL GUIDE ----------
             modelBuilder.Entity<LocalGuide>(entity =>
             {
                 entity.HasOne(g => g.User)
@@ -35,6 +37,7 @@ namespace Backend.Data
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // ---------- EXPERIENCE ----------
             modelBuilder.Entity<Experience>(entity =>
             {
                 entity.HasOne(e => e.Guide)
@@ -53,8 +56,40 @@ namespace Backend.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // ---------- TRIP ----------
+            modelBuilder.Entity<Trip>(entity =>
+            {
+                entity.HasOne(t => t.Traveler)
+                      .WithMany()
+                      .HasForeignKey(t => t.TravelerId)
+                      .OnDelete(DeleteBehavior.Cascade);
 
-            // Seed Admin & Default categories
+                entity.HasOne(t => t.TravelAgent)
+                      .WithMany()
+                      .HasForeignKey(t => t.TravelAgentId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(t => t.Destination)
+                      .WithMany()
+                      .HasForeignKey(t => t.DestinationId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ---------- TRIP STOP ----------
+            modelBuilder.Entity<TripStop>(entity =>
+            {
+                entity.HasOne(s => s.Trip)
+                      .WithMany(t => t.TripStops)
+                      .HasForeignKey(s => s.TripId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Experience is optional — if an Experience is deleted, keep the stop
+                entity.HasOne(s => s.Experience)
+                      .WithMany()
+                      .HasForeignKey(s => s.ExperienceId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
             SeedInitialData(modelBuilder);
         }
 
