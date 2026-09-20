@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../destinations/destination_browse_screen.dart';
+import '../trips/trips_screen.dart';
+import '../trips/trip_builder_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final List<Widget> pages = [
       const DestinationBrowseScreen(), // Browse
-      _buildComingSoon('My Trips', Icons.flight_takeoff), // Trips
+      const TripsScreen(), // Trips
       _buildDashboard(context, user), // Home Dashboard
       _buildComingSoon('My Bookings', Icons.confirmation_number_outlined), // Bookings
       _buildProfile(context, user), // Profile
@@ -123,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 12),
               _buildQuickActionGrid(context),
               const SizedBox(height: 24),
-              _buildSectionHeader('Recent Trips', () {}),
+              _buildSectionHeader('Recent Trips', () => setState(() => _currentIndex = 1)),
               const SizedBox(height: 12),
               _buildTripCard(),
               const SizedBox(height: 24),
@@ -200,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 14),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TripBuilderScreen())),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: const Color(0xFF4F46E5),
@@ -217,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         _buildActionTile('Explore', Icons.compass_calibration_rounded, () => setState(() => _currentIndex = 0)),
         const SizedBox(width: 10),
-        _buildActionTile('Plan AI', Icons.auto_awesome_rounded, () {}),
+        _buildActionTile('Plan AI', Icons.auto_awesome_rounded, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TripBuilderScreen()))),
         const SizedBox(width: 10),
         _buildActionTile('Bookings', Icons.calendar_month_rounded, () => setState(() => _currentIndex = 3)),
       ],
