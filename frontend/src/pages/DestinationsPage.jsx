@@ -22,8 +22,13 @@ const DestinationsPage = () => {
     latitude: '',
     longitude: '',
     currentSeason: 'Regular',
+    // ✅ NEW
+    bestTimeToVisit: '',
+    idealDuration: '',
+    highlights: '',
   });
   const { isAdmin } = useAuth();
+
   useEffect(() => {
     fetchDestinations();
   }, [isAdmin]);
@@ -53,6 +58,7 @@ const DestinationsPage = () => {
     setFormData({
       name: '', provinceState: '', country: 'Sri Lanka', description: '', imageUrl: '',
       latitude: '', longitude: '', currentSeason: 'Regular',
+      bestTimeToVisit: '', idealDuration: '', highlights: '',
     });
     setShowForm(true);
   };
@@ -85,11 +91,7 @@ const DestinationsPage = () => {
     event.preventDefault();
     setFormLoading(true);
     try {
-      const seasonValues = {
-        Regular: 0,
-        Peak: 1,
-        OffPeak: 2,
-      };
+      const seasonValues = { Regular: 0, Peak: 1, OffPeak: 2 };
       const response = await destinationAPI.create({
         ...formData,
         latitude: Number(formData.latitude),
@@ -122,7 +124,6 @@ const DestinationsPage = () => {
 
   const deleteDestination = async (destination) => {
     if (!window.confirm(`Delete "${destination.name}"? Existing experiences will be kept, but this destination will be hidden.`)) return;
-
     try {
       await destinationAPI.remove(destination.id);
       setDestinations((current) => current.filter((item) => item.id !== destination.id));
@@ -170,6 +171,15 @@ const DestinationsPage = () => {
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 mt-2 line-clamp-2">{dest.description}</p>
+
+                {/* ✅ NEW: Show enrichment fields on card if present */}
+                {dest.idealDuration && (
+                  <p className="text-xs text-gray-500 mt-2">⏱ Ideal: {dest.idealDuration}</p>
+                )}
+                {dest.bestTimeToVisit && (
+                  <p className="text-xs text-gray-500 mt-1">📅 Best: {dest.bestTimeToVisit}</p>
+                )}
+
                 <div className="flex items-center gap-4 mt-3">
                   <span className="text-xs text-gray-500">📍 {dest.provinceState}</span>
                   <span className="text-xs text-gray-500">{dest.activeExperiencesCount} experiences</span>
@@ -193,6 +203,7 @@ const DestinationsPage = () => {
         </div>
       )}
 
+      {/* ============ CREATE FORM MODAL ============ */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <form onSubmit={createDestination} className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
@@ -200,6 +211,8 @@ const DestinationsPage = () => {
               <h2 className="text-xl font-bold text-slate-900">Add New Destination</h2>
               <button type="button" onClick={() => setShowForm(false)} aria-label="Close form" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><Close /></button>
             </div>
+
+            {/* Basic Info */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium text-slate-700">Name *<input required name="name" value={formData.name} onChange={handleFormChange} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
               <label className="text-sm font-medium text-slate-700">Province/State *<input required name="provinceState" value={formData.provinceState} onChange={handleFormChange} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
@@ -208,23 +221,91 @@ const DestinationsPage = () => {
               <label className="text-sm font-medium text-slate-700">Latitude<input required type="number" step="any" name="latitude" value={formData.latitude} onChange={handleFormChange} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
               <label className="text-sm font-medium text-slate-700">Longitude<input required type="number" step="any" name="longitude" value={formData.longitude} onChange={handleFormChange} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
             </div>
+
             <label className="mt-4 block text-sm font-medium text-slate-700">Description<textarea name="description" value={formData.description} onChange={handleFormChange} rows="4" className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+
+            {/* ✅ NEW: Enrichment fields */}
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <p className="text-sm font-semibold text-slate-800 mb-3">Optional Details</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="text-sm font-medium text-slate-700">Best Time to Visit<input name="bestTimeToVisit" value={formData.bestTimeToVisit} onChange={handleFormChange} placeholder="e.g. December to March" className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+                <label className="text-sm font-medium text-slate-700">Ideal Duration<input name="idealDuration" value={formData.idealDuration} onChange={handleFormChange} placeholder="e.g. 2-3 days" className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+              </div>
+              <label className="mt-4 block text-sm font-medium text-slate-700">Highlights<textarea name="highlights" value={formData.highlights} onChange={handleFormChange} rows="2" placeholder="e.g. Nine Arches Bridge, Tea Estates, Little Adam's Peak" className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            </div>
+
             <div className="mt-4">
               <label className="block text-sm font-medium text-slate-700">Destination image</label>
               <input type="file" accept="image/*" onChange={handleImageChange} className="mt-2 block w-full text-sm" />
               {formData.imageUrl && <img src={formData.imageUrl} alt="Destination preview" className="mt-3 h-32 w-full rounded-lg object-cover" />}
             </div>
-            <div className="mt-6 flex justify-end gap-3 border-t pt-4"><button type="button" onClick={() => setShowForm(false)} className="rounded-lg bg-slate-100 px-4 py-2 text-slate-700">Cancel</button><button disabled={formLoading} className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">{formLoading ? 'Creating...' : 'Create Destination'}</button></div>
+
+            <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+              <button type="button" onClick={() => setShowForm(false)} className="rounded-lg bg-slate-100 px-4 py-2 text-slate-700">Cancel</button>
+              <button disabled={formLoading} className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">{formLoading ? 'Creating...' : 'Create Destination'}</button>
+            </div>
           </form>
         </div>
       )}
 
+      {/* ============ VIEW EXPERIENCES MODAL ============ */}
       {selectedDestination && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between border-b pb-4"><div><h2 className="text-xl font-bold text-slate-900">{selectedDestination.name}</h2><p className="text-sm text-slate-500">{selectedDestination.provinceState}, {selectedDestination.country}</p></div><button onClick={() => setSelectedDestination(null)} aria-label="Close experiences" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><Close /></button></div>
+            <div className="flex items-start justify-between border-b pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">{selectedDestination.name}</h2>
+                <p className="text-sm text-slate-500">{selectedDestination.provinceState}, {selectedDestination.country}</p>
+              </div>
+              <button onClick={() => setSelectedDestination(null)} aria-label="Close experiences" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><Close /></button>
+            </div>
+
+            {/* ✅ NEW: Display enrichment fields */}
+            {(selectedDestination.bestTimeToVisit || selectedDestination.idealDuration || selectedDestination.highlights) && (
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {selectedDestination.bestTimeToVisit && (
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">Best Time to Visit</p>
+                    <p className="text-sm font-medium text-slate-800">{selectedDestination.bestTimeToVisit}</p>
+                  </div>
+                )}
+                {selectedDestination.idealDuration && (
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">Ideal Duration</p>
+                    <p className="text-sm font-medium text-slate-800">{selectedDestination.idealDuration}</p>
+                  </div>
+                )}
+                {selectedDestination.highlights && (
+                  <div className="rounded-lg bg-slate-50 p-3 sm:col-span-2">
+                    <p className="text-xs text-slate-500">Highlights</p>
+                    <p className="text-sm font-medium text-slate-800">{selectedDestination.highlights}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <h3 className="mb-4 mt-5 font-semibold text-slate-800">All experiences ({destinationExperiences.length})</h3>
-            {destinationExperiences.length === 0 ? <p className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">No experiences for this destination yet.</p> : <div className="grid gap-3 sm:grid-cols-2">{destinationExperiences.map((experience) => <div key={experience.id} className="rounded-lg border p-4"><div className="flex items-start justify-between gap-2"><h4 className="font-semibold text-slate-900">{experience.title}</h4><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">{experience.status === 'PendingApproval' ? 'Pending' : experience.status}</span></div><p className="mt-1 line-clamp-2 text-sm text-slate-500">{experience.description}</p><div className="mt-3 flex justify-between text-xs text-slate-500"><span>{experience.durationHours} hours</span><span>${experience.currentCalculatedPrice}</span></div></div>)}</div>}
+            {destinationExperiences.length === 0 ? (
+              <p className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">No experiences for this destination yet.</p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {destinationExperiences.map((experience) => (
+                  <div key={experience.id} className="rounded-lg border p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-semibold text-slate-900">{experience.title}</h4>
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+                        {experience.status === 'PendingApproval' ? 'Pending' : experience.status}
+                      </span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-slate-500">{experience.description}</p>
+                    <div className="mt-3 flex justify-between text-xs text-slate-500">
+                      <span>{experience.durationHours} hours</span>
+                      <span>${experience.currentCalculatedPrice}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
