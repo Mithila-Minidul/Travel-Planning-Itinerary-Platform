@@ -1,0 +1,232 @@
+using System;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Backend.Data;
+using Backend.DTOs;
+using Backend.Models;
+using Backend.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace Backend.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class TripsController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+        private readonly IPlannerAgentService _plannerAgent;
+
+        public TripsController(AppDbContext context, IPlannerAgentService plannerAgent)
+        {
+            _context = context;
+            _plannerAgent = plannerAgent;
+        }
+
+        // ============================================================
+        // GET: api/Trips
+        // Admin / TravelAgent -> all trips
+        // Traveler -> only their own trips
+        // ============================================================
+        [Authorize(Roles = "Admin, TravelAgent, Traveler")]
+        [HttpGet]
+        public async Task<IActionResult> GetAllTrips()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
+
+            var query = _context.Trips
+                .Include(t => t.TripStops)
+                .Include(t => t.Traveler)
+                .Include(t => t.TravelAgent)
+                .Include(t => t.Destination)
+                .AsQueryable();
+
+            if (userRole == "Traveler")
+            {
+                query = query.Where(t => t.TravelerId.ToString() == userIdClaim);
+            }
+
+            var trips = await query
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new TripResponseDto
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Objective = t.Objective,
+                    Interests = t.Interests,
+                    DestinationId = t.DestinationId,
+                    DestinationName = t.Destination != null ? t.Destination.Name : string.Empty,
+                    StartDate = t.StartDate,
+                    EndDate = t.EndDate,
+                    Budget = t.Budget,
+                    Status = t.Status,
+                    TravelerName = t.Traveler.FullName,
+                    TravelAgentName = t.TravelAgent != null ? t.TravelAgent.FullName : null,
+                    TotalEstimatedCost = t.TripStops.Sum(s => s.EstimatedCost),
+                    CreatedAt = t.CreatedAt,
+                    UpdatedAt = t.UpdatedAt,
+                    TripStops = t.TripStops.Select(s => new TripStopDto
+                    {
+                        ExperienceId = s.ExperienceId,
+                        DayNumber = s.DayNumber,
+                        Title = s.Title,
+                        Description = s.Description,
+                        Location = s.Location,
+                        EstimatedCost = s.EstimatedCost,
+                        OrderIndex = s.OrderIndex
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(trips);
+        }
+
+        // ============================================================
+        // GET: api/Trips/{id}
+        // Trip Detail page
+        // ============================================================
+        [Authorize(Roles = "Admin, TravelAgent, Traveler")]
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> GetTripById(Guid id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            var trip = await _context.Trips
+                .Include(t => t.TripStops)
+                .Include(t => t.Traveler)
+                .Include(t => t.TravelAgent)
+                .Include(t => t.Destination)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (trip == null) return NotFound(new { message = "Trip not found." });
+
+            // Travelers can only view their own trips
+            if (userRole == "Traveler" && trip.TravelerId.ToString() != userIdClaim)
+                return Forbid();
+
+            var dto = new TripResponseDto
+            {
+                Id = trip.Id,
+                Title = trip.Title,
+                Objective = trip.Objective,
+                Interests = trip.Interests,
+                DestinationId = trip.DestinationId,
+                DestinationName = trip.Destination?.Name ?? string.Empty,
+                StartDate = trip.StartDate,
+                EndDate = trip.EndDate,
+                Budget = trip.Budget,
+                Status = trip.Status,
+                TravelerName = trip.Traveler.FullName,
+                TravelAgentName = trip.TravelAgent?.FullName,
+                TotalEstimatedCost = trip.TripStops.Sum(s => s.EstimatedCost),
+                CreatedAt = trip.CreatedAt,
+                UpdatedAt = trip.UpdatedAt,
+                TripStops = trip.TripStops
+                    .OrderBy(s => s.DayNumber).ThenBy(s => s.OrderIndex)
+                    .Select(s => new TripStopDto
+                    {
+                        ExperienceId = s.ExperienceId,
+                        DayNumber = s.DayNumber,
+                        Title = s.Title,
+                        Description = s.Description,
+                        Location = s.Location,
+                        EstimatedCost = s.EstimatedCost,
+                        OrderIndex = s.OrderIndex
+                    }).ToList()
+            };
+
+            return Ok(dto);
+        }
+
+        // ============================================================
+        // POST: api/Trips
+        // ONLY Traveler (from Flutter Mobile)
+        // Calls the Planner Agent to generate TripStops
+        // ============================================================
+        [Authorize(Roles = "Traveler")]
+        [HttpPost]
+        public async Task<IActionResult> CreateTrip([FromBody] TripCreateDto request)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
+
+            // Sanity: verify destination exists
+            var destinationExists = await _context.Destinations.AnyAsync(d => d.Id == request.DestinationId);
+            if (!destinationExists)
+                return BadRequest(new { message = "Destination not found." });
+
+            // 1. Create the Trip shell
+            var trip = new Trip
+            {
+                Title = request.Title,
+                Objective = request.Objective ?? string.Empty,
+                Interests = request.Interests ?? string.Empty,
+                DestinationId = request.DestinationId,
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
+                Budget = request.Budget,
+                Constraints = request.Constraints ?? string.Empty,
+                Status = "Pending",
+                TravelerId = Guid.Parse(userIdClaim)
+            };
+
+            // 2. Call the Planner Agent to generate the itinerary
+            var generatedStops = await _plannerAgent.GenerateItineraryAsync(
+                request.DestinationId,
+                request.StartDate,
+                request.EndDate,
+                request.Budget,
+                request.Interests ?? string.Empty);
+
+            trip.TripStops = generatedStops;
+
+            // 3. Save
+            _context.Trips.Add(trip);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Trip created and itinerary generated.",
+                tripId = trip.Id,
+                stopsGenerated = generatedStops.Count
+            });
+        }
+
+        // ============================================================
+        // PATCH: api/Trips/{id}/review
+        // ONLY TravelAgent / Admin
+        // ============================================================
+        [Authorize(Roles = "TravelAgent")]
+        [HttpPatch("{id:guid}/review")]
+        public async Task<IActionResult> ReviewTrip(Guid id, [FromBody] TripReviewDto request)
+        {
+            var agentIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var trip = await _context.Trips.FirstOrDefaultAsync(t => t.Id == id);
+            if (trip == null) return NotFound(new { message = "Trip not found." });
+
+            if (request.Status != "Approved" && request.Status != "Rejected")
+                return BadRequest(new { message = "Status must be 'Approved' or 'Rejected'." });
+
+            if (trip.Status != "Pending")
+                return BadRequest(new { message = $"Trip has already been {trip.Status}." });
+
+            trip.Status = request.Status;
+
+            if (Guid.TryParse(agentIdClaim, out var agentId))
+            {
+                trip.TravelAgentId = agentId;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Trip successfully {request.Status}.", tripId = trip.Id });
+        }
+    }
+}
