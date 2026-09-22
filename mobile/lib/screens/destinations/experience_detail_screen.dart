@@ -4,8 +4,6 @@ import '../../models/experience.dart';
 import '../../models/weather.dart';
 import '../../services/experience_service.dart';
 import '../../services/destination_service.dart';
-import '../trips/trip_builder_screen.dart';
-import '../trips/trip_list_screen.dart';
 
 class ExperienceDetailScreen extends StatefulWidget {
   final String experienceId;
@@ -43,12 +41,9 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
     try {
       final exp = await ExperienceService.getById(widget.experienceId);
       Weather? weather;
-
       try {
         weather = await DestinationService.getWeather(exp.destinationId);
-      } catch (_) {
-        // Weather is optional, ignore if fails
-      }
+      } catch (_) {}
 
       setState(() {
         _experience = exp;
@@ -56,7 +51,6 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
         _loading = false;
       });
 
-      // Start auto-scroll after data loads
       _startAutoScroll();
     } catch (e) {
       setState(() {
@@ -91,6 +85,8 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
         ? _experience!.imageUrls
         : [_experience!.coverImageUrl ?? ''];
   }
+
+  bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -140,409 +136,521 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
     final exp = _experience!;
     final images = _getImages();
 
-    return Stack(
-      children: [
-        CustomScrollView(
-          slivers: [
-            // ✅ SWIPEABLE IMAGE CAROUSEL
-            SliverAppBar(
-              expandedHeight: 280,
-              pinned: true,
-              backgroundColor: Colors.indigo,
-              foregroundColor: Colors.white,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Swipeable images with PageView
-                    PageView.builder(
-                      controller: _pageController,
-                      itemCount: images.length,
-                      onPageChanged: (index) {
-                        setState(() => _currentImageIndex = index);
-                        // Restart auto-scroll timer on manual swipe
-                        _startAutoScroll();
-                      },
-                      itemBuilder: (context, index) {
-                        if (images[index].isNotEmpty) {
-                          return Image.network(
-                            images[index],
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: Colors.indigo[100],
-                              child: const Icon(Icons.image,
-                                  size: 64, color: Colors.white),
-                            ),
-                          );
-                        } else {
-                          return Container(
-                            color: Colors.indigo[100],
-                            child: const Icon(Icons.hiking,
-                                size: 64, color: Colors.white),
-                          );
-                        }
-                      },
-                    ),
-
-                    // Gradient overlay (blocked from swiping)
-                    IgnorePointer(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.5),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Image counter (e.g., "2 / 4")
-                    if (images.length > 1)
-                      Positioned(
-                        top: 100,
-                        right: 16,
-                        child: IgnorePointer(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${_currentImageIndex + 1} / ${images.length}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    // Pagination dots
-                    if (images.length > 1)
-                      Positioned(
-                        bottom: 16,
-                        left: 0,
-                        right: 0,
-                        child: IgnorePointer(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                              images.length,
-                              (i) => AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                width: i == _currentImageIndex ? 20 : 8,
-                                height: 8,
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 3),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  color: i == _currentImageIndex
-                                      ? Colors.white
-                                      : Colors.white.withOpacity(0.4),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Content
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Category chip
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.indigo[50],
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        exp.categoryName.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.indigo,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Title
-                    Text(
-                      exp.title,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Location + Rating
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on,
-                            size: 16, color: Colors.indigo),
-                        const SizedBox(width: 4),
-                        Text(
-                          exp.destinationName,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(width: 16),
-                        const Icon(Icons.star,
-                            size: 16, color: Colors.amber),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${exp.rating.toStringAsFixed(1)} (${exp.totalBookingsCount} bookings)',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const SizedBox(height: 20),
-
-                    // Info Grid
-                    Row(
-                      children: [
-                        _buildInfoItem(Icons.access_time, 'Duration',
-                            '${exp.durationHours} hours'),
-                        _buildInfoItem(Icons.people, 'Max Capacity',
-                            '${exp.maxCapacity} people'),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        _buildInfoItem(Icons.place, 'Meeting Point',
-                            exp.meetingPoint.isEmpty
-                                ? 'TBD'
-                                : exp.meetingPoint),
-                        _buildInfoItem(Icons.person, 'Guide', exp.guideName),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-                    const Divider(),
-                    const SizedBox(height: 20),
-
-                    // Description
-                    const Text(
-                      'About this Experience',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      exp.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[800],
-                        height: 1.5,
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                    const Divider(),
-                    const SizedBox(height: 20),
-
-                    // Availability
-                    const Text(
-                      'Availability',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: exp.availableWeekdays.map((day) {
-                        return Chip(
-                          label: Text(
-                            day.length > 3 ? day.substring(0, 3) : day,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          backgroundColor: Colors.green[50],
-                          side: BorderSide(color: Colors.green[200]!),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time,
-                            size: 16, color: Colors.grey),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${exp.startTime} - ${exp.endTime}',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-
-                    // Weather
-                    if (_weather != null) ...[
-                      const SizedBox(height: 24),
-                      const Divider(),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Weather',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.blue[100]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _getWeatherIcon(_weather!.condition),
-                              size: 40,
-                              color: Colors.blue[700],
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${_weather!.temperatureCelsius.toStringAsFixed(1)}°C — ${_weather!.condition}',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _weather!.description,
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.grey),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _weather!.weatherSuitability,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.blue[700],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 120), // space for bottom bar
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        // ✅ FLOATING BOTTOM PRICE BAR
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey[200]!)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
+    return CustomScrollView(
+      slivers: [
+        // ================= IMAGE CAROUSEL =================
+        SliverAppBar(
+          expandedHeight: 280,
+          pinned: true,
+          backgroundColor: Colors.indigo,
+          foregroundColor: Colors.white,
+          flexibleSpace: FlexibleSpaceBar(
+            background: Stack(
+              fit: StackFit.expand,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Price',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                    Text(
-                      '\$${exp.currentCalculatedPrice.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo,
-                      ),
-                    ),
-                  ],
+                PageView.builder(
+                  controller: _pageController,
+                  itemCount: images.length,
+                  onPageChanged: (index) {
+                    setState(() => _currentImageIndex = index);
+                    _startAutoScroll();
+                  },
+                  itemBuilder: (context, index) {
+                    if (images[index].isNotEmpty) {
+                      return Image.network(
+                        images[index],
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.indigo[100],
+                          child: const Icon(Icons.image,
+                              size: 64, color: Colors.white),
+                        ),
+                      );
+                    }
+                    return Container(
+                      color: Colors.indigo[100],
+                      child: const Icon(Icons.hiking,
+                          size: 64, color: Colors.white),
+                    );
+                  },
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => TripBuilderScreen(
-        destinationId: exp.destinationId,
-        destinationName: exp.destinationName,
-      ),
-    ),
-  );
-
-  if (result != null && mounted) {
-    // Trip was created successfully - go to My Trips
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const TripListScreen()),
-    );
-  }
-},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text(
-                      'Create Trip with AI',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.5),
+                        ],
                       ),
                     ),
                   ),
                 ),
+                if (images.length > 1)
+                  Positioned(
+                    top: 100,
+                    right: 16,
+                    child: IgnorePointer(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_currentImageIndex + 1} / ${images.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (images.length > 1)
+                  Positioned(
+                    bottom: 16,
+                    left: 0,
+                    right: 0,
+                    child: IgnorePointer(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          images.length,
+                          (i) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: i == _currentImageIndex ? 20 : 8,
+                            height: 8,
+                            margin:
+                                const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(4),
+                              color: i == _currentImageIndex
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+
+        // ================= CONTENT =================
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Category chip
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo[50],
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    exp.categoryName.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.indigo,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Title
+                Text(
+                  exp.title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Location + Rating
+                Row(
+                  children: [
+                    const Icon(Icons.location_on,
+                        size: 16, color: Colors.indigo),
+                    const SizedBox(width: 4),
+                    Text(
+                      exp.destinationName,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(width: 16),
+                    const Icon(Icons.star, size: 16, color: Colors.amber),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${exp.rating.toStringAsFixed(1)} (${exp.totalBookingsCount} bookings)',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+
+                // ✅ NEW: Price row right after rating
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '\$${exp.currentCalculatedPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo,
+                      ),
+                    ),
+                    if (exp.currentCalculatedPrice > exp.basePrice) ...[
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          '\$${exp.basePrice.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 6),
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        'per person',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 20),
+
+                // Info Grid
+                Row(
+                  children: [
+                    _buildInfoItem(Icons.access_time, 'Duration',
+                        '${exp.durationHours} hours'),
+                    _buildInfoItem(Icons.people, 'Max Capacity',
+                        '${exp.maxCapacity} people'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    _buildInfoItem(Icons.place, 'Meeting Point',
+                        exp.meetingPoint.isEmpty ? 'TBD' : exp.meetingPoint),
+                    _buildInfoItem(Icons.person, 'Guide', exp.guideName),
+                  ],
+                ),
+
+                // Languages + Fitness Level (if present)
+                if (_hasText(exp.languages) || _hasText(exp.fitnessLevel)) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _buildInfoItem(
+                          Icons.language,
+                          'Languages',
+                          _hasText(exp.languages)
+                              ? exp.languages!
+                              : 'Not specified'),
+                      _buildInfoItem(
+                          Icons.fitness_center,
+                          'Fitness',
+                          _hasText(exp.fitnessLevel)
+                              ? exp.fitnessLevel!
+                              : 'Not specified'),
+                    ],
+                  ),
+                ],
+
+                // Minimum Age (if present)
+                if (exp.minAge != null && exp.minAge! > 0) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _buildInfoItem(
+                          Icons.cake, 'Minimum Age', '${exp.minAge} years'),
+                      const Spacer(),
+                    ],
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 20),
+
+                // Description
+                const Text(
+                  'About this Experience',
+                  style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  exp.description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[800],
+                    height: 1.5,
+                  ),
+                ),
+
+                // What's Included
+                if (_hasText(exp.whatIncluded)) ...[
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "What's Included",
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBulletList(exp.whatIncluded!, Colors.green),
+                ],
+
+                // What's NOT Included
+                if (_hasText(exp.whatNotIncluded)) ...[
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "What's NOT Included",
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBulletList(exp.whatNotIncluded!, Colors.red),
+                ],
+
+                // What to Bring
+                if (_hasText(exp.whatToBring)) ...[
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'What to Bring',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBulletList(exp.whatToBring!, Colors.indigo),
+                ],
+
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 20),
+
+                // Availability
+                const Text(
+                  'Availability',
+                  style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: exp.availableWeekdays.map((day) {
+                    return Chip(
+                      label: Text(
+                        day.length > 3 ? day.substring(0, 3) : day,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      backgroundColor: Colors.green[50],
+                      side: BorderSide(color: Colors.green[200]!),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.access_time,
+                        size: 16, color: Colors.grey),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${exp.startTime} - ${exp.endTime}',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+
+                // Cancellation Policy
+                if (_hasText(exp.cancellationPolicy)) ...[
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Cancellation Policy',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.event_busy,
+                            size: 20, color: Colors.orange),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            exp.cancellationPolicy!,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Important Notes
+                if (_hasText(exp.importantNotes)) ...[
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Important Notes',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline,
+                            size: 20, color: Colors.blue),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            exp.importantNotes!,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Weather
+                if (_weather != null) ...[
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Weather',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue[100]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getWeatherIcon(_weather!.condition),
+                          size: 40,
+                          color: Colors.blue[700],
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${_weather!.temperatureCelsius.toStringAsFixed(1)}°C — ${_weather!.condition}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _weather!.description,
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _weather!.weatherSuitability,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // ✅ Note at bottom (no Book Now button anymore)
+                const SizedBox(height: 32),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.indigo[100]!),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline,
+                          size: 20, color: Colors.indigo),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Go back to the destination page and tap "Create Trip with AI" to include this experience in a trip.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.indigo,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -585,6 +693,44 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Renders a comma-separated string (or newline-separated) as bullet points
+  Widget _buildBulletList(String text, Color accentColor) {
+    final items = text
+        .split(RegExp(r'[,\n]'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: items.map((item) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Icon(Icons.circle, size: 6, color: accentColor),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  item,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[800],
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 

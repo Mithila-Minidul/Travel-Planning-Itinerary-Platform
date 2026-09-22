@@ -129,11 +129,27 @@ const TripDetailPage = () => {
           </div>
         </div>
 
-        {trip.travelAgentName && (
-          <p className="mt-4 text-xs text-gray-500">
-            Reviewed by: <strong>{trip.travelAgentName}</strong>
-          </p>
-        )}
+        {/* ✅ NEW: Assigned Local Guide */}
+{trip.guideName && (
+  <div className="mt-4 rounded-lg bg-indigo-50 border border-indigo-100 p-3 flex items-center gap-3">
+    <div className="h-10 w-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
+      {trip.guideName.charAt(0).toUpperCase()}
+    </div>
+    <div>
+      <p className="text-xs text-gray-500">Assigned Local Guide</p>
+      <p className="font-semibold text-gray-800">{trip.guideName}</p>
+      {trip.guideCity && (
+        <p className="text-xs text-gray-500">📍 {trip.guideCity}</p>
+      )}
+    </div>
+  </div>
+)}
+
+{trip.travelAgentName && (
+  <p className="mt-3 text-xs text-gray-500">
+    Reviewed by: <strong>{trip.travelAgentName}</strong>
+  </p>
+)}
       </div>
 
       {/* ================= ITINERARY ================= */}

@@ -22,6 +22,16 @@ class Experience {
   final double rating;
   final int totalBookingsCount;
 
+  // ✅ NEW ENRICHMENT FIELDS
+  final String? whatIncluded;
+  final String? whatNotIncluded;
+  final String? whatToBring;
+  final String? cancellationPolicy;
+  final String? languages;
+  final String? fitnessLevel;
+  final int? minAge;
+  final String? importantNotes;
+
   Experience({
     required this.id,
     required this.guideId,
@@ -45,6 +55,15 @@ class Experience {
     required this.status,
     required this.rating,
     required this.totalBookingsCount,
+    // ✅ NEW
+    this.whatIncluded,
+    this.whatNotIncluded,
+    this.whatToBring,
+    this.cancellationPolicy,
+    this.languages,
+    this.fitnessLevel,
+    this.minAge,
+    this.importantNotes,
   });
 
   factory Experience.fromJson(Map<String, dynamic> json) {
@@ -71,6 +90,15 @@ class Experience {
       status: json['status'] ?? '',
       rating: (json['rating'] ?? 0).toDouble(),
       totalBookingsCount: json['totalBookingsCount'] ?? 0,
+      // ✅ NEW
+      whatIncluded: json['whatIncluded'],
+      whatNotIncluded: json['whatNotIncluded'],
+      whatToBring: json['whatToBring'],
+      cancellationPolicy: json['cancellationPolicy'],
+      languages: json['languages'],
+      fitnessLevel: json['fitnessLevel'],
+      minAge: json['minAge'],
+      importantNotes: json['importantNotes'],
     );
   }
 }
