@@ -65,7 +65,7 @@ namespace backend.Migrations
                             IconName = "hiking",
                             IsActive = true,
                             Name = "Hiking",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5267)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5645)
                         },
                         new
                         {
@@ -75,7 +75,7 @@ namespace backend.Migrations
                             IconName = "tea",
                             IsActive = true,
                             Name = "Tea & Plantation",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5277)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5651)
                         },
                         new
                         {
@@ -85,7 +85,7 @@ namespace backend.Migrations
                             IconName = "temple",
                             IsActive = true,
                             Name = "Culture & Heritage",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5282)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5654)
                         },
                         new
                         {
@@ -95,7 +95,7 @@ namespace backend.Migrations
                             IconName = "beach",
                             IsActive = true,
                             Name = "Beach & Surfing",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5287)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5658)
                         },
                         new
                         {
@@ -105,7 +105,7 @@ namespace backend.Migrations
                             IconName = "wildlife",
                             IsActive = true,
                             Name = "Wildlife & Safari",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5292)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5675)
                         },
                         new
                         {
@@ -115,7 +115,7 @@ namespace backend.Migrations
                             IconName = "train",
                             IsActive = true,
                             Name = "Train Journeys",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5298)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5678)
                         },
                         new
                         {
@@ -125,7 +125,7 @@ namespace backend.Migrations
                             IconName = "nature",
                             IsActive = true,
                             Name = "Nature & Waterfalls",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5302)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5681)
                         },
                         new
                         {
@@ -135,7 +135,7 @@ namespace backend.Migrations
                             IconName = "food",
                             IsActive = true,
                             Name = "Food & Cooking",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5316)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5684)
                         },
                         new
                         {
@@ -145,7 +145,7 @@ namespace backend.Migrations
                             IconName = "festival",
                             IsActive = true,
                             Name = "Festivals & Events",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5320)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5687)
                         });
                 });
 
@@ -154,6 +154,10 @@ namespace backend.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("BestTimeToVisit")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Country")
                         .IsRequired()
@@ -170,6 +174,14 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Highlights")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("IdealDuration")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
@@ -213,7 +225,7 @@ namespace backend.Migrations
                             Longitude = 81.046599999999998,
                             Name = "Ella",
                             ProvinceState = "Uva Province",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5470)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5778)
                         },
                         new
                         {
@@ -227,7 +239,7 @@ namespace backend.Migrations
                             Longitude = 80.633700000000005,
                             Name = "Kandy",
                             ProvinceState = "Central Province",
-                            UpdatedAt = new DateTime(2026, 9, 20, 16, 50, 33, 567, DateTimeKind.Utc).AddTicks(5481)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5784)
                         });
                 });
 
@@ -244,6 +256,10 @@ namespace backend.Migrations
 
                     b.Property<decimal>("BasePrice")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CancellationPolicy")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
@@ -270,6 +286,10 @@ namespace backend.Migrations
                         .HasMaxLength(5)
                         .HasColumnType("character varying(5)");
 
+                    b.Property<string>("FitnessLevel")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<Guid>("GuideId")
                         .HasColumnType("uuid");
 
@@ -282,11 +302,19 @@ namespace backend.Migrations
                     b.Property<string>("Image4Url")
                         .HasColumnType("text");
 
+                    b.Property<string>("ImportantNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsDynamicPricingEnabled")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Languages")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<int>("MaxCapacity")
                         .HasColumnType("integer");
@@ -295,6 +323,9 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("MinAge")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("PeakSeasonMultiplier")
                         .HasColumnType("numeric");
@@ -323,6 +354,18 @@ namespace backend.Migrations
 
                     b.Property<decimal>("WeekendMultiplier")
                         .HasColumnType("numeric");
+
+                    b.Property<string>("WhatIncluded")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("WhatNotIncluded")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("WhatToBring")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.HasKey("Id");
 
@@ -576,7 +619,7 @@ namespace backend.Migrations
                             Email = "admin@travelapp.com",
                             FullName = "System Administrator",
                             IsActive = true,
-                            PasswordHash = "$2a$11$LDZnGsY0wp7AntFlPZ4XkOlYr2wOeooScfoAJg.bR0e0roWhko5iG",
+                            PasswordHash = "$2a$11$YgMGRT/vI6lgFEkqZQ3FPecmlA1NZFfsFAG0pqJF0eJrxTdhSbyCm",
                             PhoneNumber = "+94770000000",
                             Role = "Admin",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
