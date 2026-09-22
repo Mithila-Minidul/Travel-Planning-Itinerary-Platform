@@ -4,6 +4,8 @@ import '../../models/experience.dart';
 import '../../models/weather.dart';
 import '../../services/experience_service.dart';
 import '../../services/destination_service.dart';
+import '../trips/trip_builder_screen.dart';
+import '../trips/trip_list_screen.dart';
 
 class ExperienceDetailScreen extends StatefulWidget {
   final String experienceId;
@@ -505,15 +507,25 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Booking feature coming soon (Member 3)'),
-                          backgroundColor: Colors.indigo,
-                        ),
-                      );
-                    },
+                    onPressed: () async {
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => TripBuilderScreen(
+        destinationId: exp.destinationId,
+        destinationName: exp.destinationName,
+      ),
+    ),
+  );
+
+  if (result != null && mounted) {
+    // Trip was created successfully - go to My Trips
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TripListScreen()),
+    );
+  }
+},
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.indigo,
                       padding: const EdgeInsets.symmetric(vertical: 16),
