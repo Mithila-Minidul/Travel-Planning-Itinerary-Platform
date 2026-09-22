@@ -5,7 +5,6 @@ using System.ComponentModel.DataAnnotations;
 namespace Backend.DTOs
 {
     // ================= CREATE =================
-    // Traveler submits this. No TripStops — AI generates them.
     public class TripCreateDto
     {
         [Required, MaxLength(200)]
@@ -29,12 +28,11 @@ namespace Backend.DTOs
         [MaxLength(1000)]
         public string Constraints { get; set; } = string.Empty;
 
-        // Comma-separated, e.g. "Hiking,Nature,Culture"
         [MaxLength(500)]
         public string Interests { get; set; } = string.Empty;
     }
 
-    // ================= STOP (used in responses) =================
+    // ================= STOP =================
     public class TripStopDto
     {
         public Guid? ExperienceId { get; set; }
@@ -46,11 +44,11 @@ namespace Backend.DTOs
         public int OrderIndex { get; set; }
     }
 
-    // ================= REVIEW (Travel Agent approves/rejects) =================
+    // ================= REVIEW =================
     public class TripReviewDto
     {
         [Required]
-        public string Status { get; set; } = string.Empty; // "Approved" or "Rejected"
+        public string Status { get; set; } = string.Empty;
 
         public string? RejectionReason { get; set; }
     }
@@ -74,7 +72,11 @@ namespace Backend.DTOs
         public string TravelerName { get; set; } = string.Empty;
         public string? TravelAgentName { get; set; }
 
-        // Sum of all stop costs — useful for "over budget" warnings
+        // ✅ NEW: Assigned Local Guide (ONE guide per trip)
+        public Guid? GuideId { get; set; }
+        public string? GuideName { get; set; }
+        public string? GuideCity { get; set; }
+
         public decimal TotalEstimatedCost { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

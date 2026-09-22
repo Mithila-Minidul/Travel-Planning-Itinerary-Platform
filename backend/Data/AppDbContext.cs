@@ -73,6 +73,12 @@ namespace Backend.Data
                       .WithMany()
                       .HasForeignKey(t => t.DestinationId)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                // ✅ NEW: ONE Local Guide per trip
+                entity.HasOne(t => t.Guide)
+                      .WithMany()
+                      .HasForeignKey(t => t.GuideId)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
 
             // ---------- TRIP STOP ----------
@@ -83,7 +89,6 @@ namespace Backend.Data
                       .HasForeignKey(s => s.TripId)
                       .OnDelete(DeleteBehavior.Cascade);
 
-                // Experience is optional — if an Experience is deleted, keep the stop
                 entity.HasOne(s => s.Experience)
                       .WithMany()
                       .HasForeignKey(s => s.ExperienceId)

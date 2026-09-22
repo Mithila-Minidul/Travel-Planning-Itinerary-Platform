@@ -8,9 +8,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Services
 {
+    /// <summary>
+    /// Result of the Planner Agent — contains stops AND the chosen guide.
+    /// </summary>
+    public class PlannerResult
+    {
+        public List<TripStop> Stops { get; set; } = new();
+        public Guid? WinningGuideId { get; set; }
+        public string? WinningGuideName { get; set; }
+    }
+
     public interface IPlannerAgentService
     {
-        Task<List<TripStop>> GenerateItineraryAsync(
+        Task<PlannerResult> GenerateItineraryAsync(
             Guid destinationId,
             DateTime startDate,
             DateTime endDate,
@@ -27,7 +37,7 @@ namespace Backend.Services
             _context = context;
         }
 
-        public async Task<List<TripStop>> GenerateItineraryAsync(
+        public async Task<PlannerResult> GenerateItineraryAsync(
             Guid destinationId,
             DateTime startDate,
             DateTime endDate,
@@ -35,27 +45,24 @@ namespace Backend.Services
             string interests)
         {
             // ============================================================
-            // PLACEHOLDER — Will be replaced by Python AI Service later
+            // STEP 1: Compute trip duration (1-14 days)
             // ============================================================
-            // Simplified logic:
-            // 1. Calculate number of days
-            // 2. Parse traveler's interests
-            // 3. Find matching approved Experiences in that destination
-            // 4. Pick top-rated experiences per day within per-day budget
-            // ============================================================
-
             var totalDays = (endDate.Date - startDate.Date).Days + 1;
             if (totalDays < 1) totalDays = 1;
-            if (totalDays > 14) totalDays = 14; // hard cap
+            if (totalDays > 14) totalDays = 14;
 
-            // Parse interests into a lowercase list
+            // ============================================================
+            // STEP 2: Parse interests
+            // ============================================================
             var interestList = (interests ?? "")
                 .Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(i => i.Trim().ToLowerInvariant())
                 .Where(i => !string.IsNullOrEmpty(i))
                 .ToList();
 
-            // Get matching category IDs (if interests specified)
+            // ============================================================
+            // STEP 3: Map interests → Category IDs
+            // ============================================================
             List<Guid> matchingCategoryIds = new();
             if (interestList.Count > 0)
             {
@@ -65,49 +72,124 @@ namespace Backend.Services
                     .ToListAsync();
             }
 
-            // Fetch candidate experiences (approved, in destination, matching categories)
-            var experienceQuery = _context.Experiences
+            // ============================================================
+            // STEP 4: Fetch ALL approved experiences in this destination
+            // ============================================================
+            var allExperiences = await _context.Experiences
                 .Include(e => e.Category)
+                .Include(e => e.Guide)
+                    .ThenInclude(g => g.User)
                 .Where(e => e.DestinationId == destinationId
-                         && e.Status == ExperienceStatus.Approved);
-
-            if (matchingCategoryIds.Count > 0)
-            {
-                experienceQuery = experienceQuery.Where(e => matchingCategoryIds.Contains(e.CategoryId));
-            }
-
-            var candidates = await experienceQuery
-                .OrderByDescending(e => e.Rating)
-                .ThenByDescending(e => e.TotalBookingsCount)
-                .Take(totalDays * 3)
+                         && e.Status == ExperienceStatus.Approved)
                 .ToListAsync();
 
-            // Build the day-by-day itinerary
+            if (allExperiences.Count == 0)
+            {
+                return new PlannerResult
+                {
+                    Stops = BuildPlaceholderDays(
+                        totalDays,
+                        "No approved experiences in this destination yet."),
+                    WinningGuideId = null,
+                    WinningGuideName = null
+                };
+            }
+
+            // ============================================================
+            // STEP 5: Group by Guide
+            // ============================================================
+            var allGuideGroups = allExperiences
+                .GroupBy(e => e.GuideId)
+                .Select(g => new
+                {
+                    GuideId = g.Key,
+                    Guide = g.First().Guide,
+                    Experiences = g.ToList(),
+                    MatchingCount = g.Count(e =>
+                        matchingCategoryIds.Contains(e.CategoryId)),
+                    RatingScore = g.First().Guide?.Rating ?? 0m,
+                    ExperienceScore = g.First().Guide?.YearsOfExperience ?? 0
+                })
+                .ToList();
+
+            // ✅ STRICT FILTER: If interests given, prefer guides WITH matches
+            List<dynamic> eligibleGuides;
+            if (matchingCategoryIds.Count > 0)
+            {
+                var guidesWithMatches = allGuideGroups
+                    .Where(g => g.MatchingCount > 0)
+                    .ToList<dynamic>();
+
+                // If at least one guide has matches, use ONLY those guides
+                eligibleGuides = guidesWithMatches.Count > 0
+                    ? guidesWithMatches
+                    : allGuideGroups.Cast<dynamic>().ToList();
+            }
+            else
+            {
+                eligibleGuides = allGuideGroups.Cast<dynamic>().ToList();
+            }
+
+            // Pick the winning guide
+            var winningGuide = eligibleGuides
+                .OrderByDescending(g => (int)g.MatchingCount)
+                .ThenByDescending(g => (decimal)g.RatingScore)
+                .ThenByDescending(g => (int)g.ExperienceScore)
+                .First();
+
+            // ============================================================
+            // STEP 6: Build candidate pool
+            // ✅ STRICT: If matching experiences exist, use ONLY those.
+            // ============================================================
+            var guideExperiences = ((IEnumerable<Experience>)winningGuide.Experiences).ToList();
+
+            var matchingExperiences = guideExperiences
+                .Where(e => matchingCategoryIds.Contains(e.CategoryId))
+                .ToList();
+
+            List<Experience> candidates;
+            if (matchingCategoryIds.Count > 0 && matchingExperiences.Count > 0)
+            {
+                // ✅ STRICT MODE — only experiences that match the chosen interests
+                candidates = matchingExperiences;
+            }
+            else
+            {
+                // Fallback — guide has no matching experiences
+                candidates = guideExperiences;
+            }
+
+            // Sort: cheapest first (within the matched set)
+            candidates = candidates
+                .OrderBy(e => e.BasePrice)
+                .ToList();
+
+            // ============================================================
+            // STEP 7: Build day-by-day itinerary
+            // ✅ KEEP the candidates order (do NOT re-sort per day)
+            // ============================================================
             var stops = new List<TripStop>();
-            var usedExperienceIds = new HashSet<Guid>();
-            var perDayBudget = budget / totalDays;
+            var usedIds = new HashSet<Guid>();
             var orderIndex = 0;
+
+            // Distribute experiences evenly across days
+            var experiencesPerDay = candidates.Count > 0
+                ? Math.Max(1, (int)Math.Ceiling((double)candidates.Count / totalDays))
+                : 0;
+            experiencesPerDay = Math.Min(experiencesPerDay, 2); // max 2 per day
 
             for (int day = 1; day <= totalDays; day++)
             {
-                // Try to pick up to 2 experiences for this day that fit the per-day budget
+                // ✅ Take next items from the ordered candidate list (NO re-sort)
                 var dayPicks = candidates
-                    .Where(e => !usedExperienceIds.Contains(e.Id) && e.BasePrice <= perDayBudget)
-                    .Take(2)
+                    .Where(e => !usedIds.Contains(e.Id))
+                    .Take(experiencesPerDay)
                     .ToList();
 
-                // Fallback: if nothing fits the budget, just take anything unused
-                if (!dayPicks.Any())
-                {
-                    dayPicks = candidates
-                        .Where(e => !usedExperienceIds.Contains(e.Id))
-                        .Take(1)
-                        .ToList();
-                }
-
+                // If out of experiences, no more picking
                 foreach (var exp in dayPicks)
                 {
-                    usedExperienceIds.Add(exp.Id);
+                    usedIds.Add(exp.Id);
                     stops.Add(new TripStop
                     {
                         ExperienceId = exp.Id,
@@ -120,22 +202,70 @@ namespace Backend.Services
                     });
                 }
 
-                // If no experiences available at all, add a placeholder free day
-                if (!dayPicks.Any() && candidates.Count == 0)
+                // If day has no pick AND we still have unused experiences → add 1
+                if (dayPicks.Count == 0)
                 {
-                    stops.Add(new TripStop
+                    var remaining = candidates
+                        .Where(e => !usedIds.Contains(e.Id))
+                        .Take(1)
+                        .ToList();
+
+                    if (remaining.Count > 0)
                     {
-                        ExperienceId = null,
-                        DayNumber = day,
-                        Title = $"Free Day {day}",
-                        Description = "Explore at your own pace. Your Travel Agent may suggest activities.",
-                        Location = "TBD",
-                        EstimatedCost = 0,
-                        OrderIndex = orderIndex++
-                    });
+                        var exp = remaining[0];
+                        usedIds.Add(exp.Id);
+                        stops.Add(new TripStop
+                        {
+                            ExperienceId = exp.Id,
+                            DayNumber = day,
+                            Title = exp.Title,
+                            Description = exp.Description,
+                            Location = exp.MeetingPoint ?? "TBD",
+                            EstimatedCost = exp.BasePrice,
+                            OrderIndex = orderIndex++
+                        });
+                    }
+                    else
+                    {
+                        // Truly nothing left — Free Day
+                        stops.Add(new TripStop
+                        {
+                            ExperienceId = null,
+                            DayNumber = day,
+                            Title = $"Day {day}: Free Day",
+                            Description = "Explore at your own pace.",
+                            Location = winningGuide.Guide?.City ?? "TBD",
+                            EstimatedCost = 0,
+                            OrderIndex = orderIndex++
+                        });
+                    }
                 }
             }
 
+            return new PlannerResult
+            {
+                Stops = stops,
+                WinningGuideId = winningGuide.GuideId,
+                WinningGuideName = winningGuide.Guide?.User?.FullName ?? "Local Guide"
+            };
+        }
+
+        private List<TripStop> BuildPlaceholderDays(int totalDays, string reason)
+        {
+            var stops = new List<TripStop>();
+            for (int day = 1; day <= totalDays; day++)
+            {
+                stops.Add(new TripStop
+                {
+                    ExperienceId = null,
+                    DayNumber = day,
+                    Title = $"Day {day}: Explore",
+                    Description = reason,
+                    Location = "TBD",
+                    EstimatedCost = 0,
+                    OrderIndex = day - 1
+                });
+            }
             return stops;
         }
     }

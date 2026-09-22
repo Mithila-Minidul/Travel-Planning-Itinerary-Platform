@@ -173,6 +173,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         ),
         const SizedBox(height: 16),
 
+        // ================= ✅ NEW: ASSIGNED LOCAL GUIDE =================
+        if ((trip['guideName'] ?? '').toString().isNotEmpty)
+          _buildGuideCard(trip),
+
         // ================= AI PROGRESS WIDGET =================
         AiProgressWidget(status: (trip['status'] ?? 'Pending').toString()),
         const SizedBox(height: 16),
@@ -187,7 +191,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+              border: Border.all(
+                  color: Colors.grey.shade300, style: BorderStyle.solid),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Center(
@@ -223,6 +228,88 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           }),
         const SizedBox(height: 24),
       ],
+    );
+  }
+
+  // ✅ NEW: Assigned Local Guide Card
+  Widget _buildGuideCard(dynamic trip) {
+    final guideName = (trip['guideName'] ?? '').toString();
+    final guideCity = (trip['guideCity'] ?? '').toString();
+    final initial = guideName.isNotEmpty ? guideName[0].toUpperCase() : '?';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF4F46E5).withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF4F46E5).withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: const Color(0xFF4F46E5),
+            child: Text(
+              initial,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Assigned Local Guide',
+                  style: TextStyle(color: Colors.grey, fontSize: 11),
+                ),
+                Text(
+                  guideName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                if (guideCity.isNotEmpty)
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on,
+                          size: 12, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        guideCity,
+                        style: const TextStyle(
+                            color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4F46E5),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Your Guide',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

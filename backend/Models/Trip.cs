@@ -12,7 +12,6 @@ namespace Backend.Models
         [MaxLength(1000)]
         public string Objective { get; set; } = string.Empty;
 
-        // ✅ NEW - comma-separated interests, e.g. "Hiking,Nature,Culture"
         [MaxLength(500)]
         public string Interests { get; set; } = string.Empty;
 
@@ -28,11 +27,11 @@ namespace Backend.Models
         [MaxLength(1000)]
         public string Constraints { get; set; } = string.Empty;
 
-        // Status: Pending, Approved, Rejected
+        // Status: Pending, Approved, Rejected, Confirmed, Completed, Cancelled
         [Required, MaxLength(50)]
         public string Status { get; set; } = "Pending";
 
-        // ✅ NEW - Destination FK
+        // Destination FK
         public Guid DestinationId { get; set; }
         public Destination Destination { get; set; } = null!;
 
@@ -43,6 +42,10 @@ namespace Backend.Models
         // Travel Agent who reviewed it (nullable until reviewed)
         public Guid? TravelAgentId { get; set; }
         public User? TravelAgent { get; set; }
+
+        // ✅ NEW: ONE Local Guide owns all experiences in this trip
+        public Guid? GuideId { get; set; }
+        public LocalGuide? Guide { get; set; }
 
         public ICollection<TripStop> TripStops { get; set; } = new List<TripStop>();
     }

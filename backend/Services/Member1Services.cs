@@ -21,32 +21,32 @@ namespace Backend.Services
         {
             return await _context.Categories
                 .Where(c => c.IsActive)
-                .Select(c => new CategoryResponseDto 
-                { 
-                    Id = c.Id, 
-                    Name = c.Name, 
-                    Description = c.Description, 
-                    IconName = c.IconName 
+                .Select(c => new CategoryResponseDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Description = c.Description,
+                    IconName = c.IconName
                 })
                 .ToListAsync();
         }
 
         public async Task<CategoryResponseDto> CreateAsync(CategoryCreateDto dto)
         {
-            var category = new Category 
-            { 
-                Name = dto.Name, 
-                Description = dto.Description, 
-                IconName = dto.IconName 
+            var category = new Category
+            {
+                Name = dto.Name,
+                Description = dto.Description,
+                IconName = dto.IconName
             };
             _context.Categories.Add(category);
             await _context.SaveChangesAsync();
-            return new CategoryResponseDto 
-            { 
-                Id = category.Id, 
-                Name = category.Name, 
-                Description = category.Description, 
-                IconName = category.IconName 
+            return new CategoryResponseDto
+            {
+                Id = category.Id,
+                Name = category.Name,
+                Description = category.Description,
+                IconName = category.IconName
             };
         }
     }
@@ -78,7 +78,11 @@ namespace Backend.Services
                     Latitude = d.Latitude,
                     Longitude = d.Longitude,
                     CurrentSeason = d.CurrentSeason.ToString(),
-                    ActiveExperiencesCount = d.Experiences.Count(e => e.Status == ExperienceStatus.Approved && e.IsActive)
+                    ActiveExperiencesCount = d.Experiences.Count(e => e.Status == ExperienceStatus.Approved && e.IsActive),
+                    // ✅ NEW
+                    BestTimeToVisit = d.BestTimeToVisit,
+                    IdealDuration = d.IdealDuration,
+                    Highlights = d.Highlights
                 }).ToListAsync();
         }
 
@@ -98,7 +102,11 @@ namespace Backend.Services
                 Latitude = d.Latitude,
                 Longitude = d.Longitude,
                 CurrentSeason = d.CurrentSeason.ToString(),
-                ActiveExperiencesCount = d.Experiences.Count(e => e.Status == ExperienceStatus.Approved && e.IsActive)
+                ActiveExperiencesCount = d.Experiences.Count(e => e.Status == ExperienceStatus.Approved && e.IsActive),
+                // ✅ NEW
+                BestTimeToVisit = d.BestTimeToVisit,
+                IdealDuration = d.IdealDuration,
+                Highlights = d.Highlights
             };
         }
 
@@ -113,7 +121,11 @@ namespace Backend.Services
                 ImageUrl = dto.ImageUrl,
                 Latitude = dto.Latitude,
                 Longitude = dto.Longitude,
-                CurrentSeason = dto.CurrentSeason
+                CurrentSeason = dto.CurrentSeason,
+                // ✅ NEW
+                BestTimeToVisit = dto.BestTimeToVisit,
+                IdealDuration = dto.IdealDuration,
+                Highlights = dto.Highlights
             };
             _context.Destinations.Add(dest);
             await _context.SaveChangesAsync();
@@ -196,7 +208,6 @@ namespace Backend.Services
 
             g.Status = status;
 
-            // Activate user account when approved, deactivate if rejected or suspended
             if (g.User != null)
             {
                 g.User.IsActive = (status == GuideStatus.Approved);
@@ -304,11 +315,20 @@ namespace Backend.Services
                 Image2Url = dto.ImageUrls.ElementAtOrDefault(1),
                 Image3Url = dto.ImageUrls.ElementAtOrDefault(2),
                 Image4Url = dto.ImageUrls.ElementAtOrDefault(3),
-                Status = ExperienceStatus.PendingApproval, // Admin must approve
+                Status = ExperienceStatus.PendingApproval,
                 IsDynamicPricingEnabled = dto.IsDynamicPricingEnabled,
                 WeekendMultiplier = dto.WeekendMultiplier,
                 PeakSeasonMultiplier = dto.PeakSeasonMultiplier,
-                AvailableWeekdays = string.Join(',', dto.AvailableWeekdays)
+                AvailableWeekdays = string.Join(',', dto.AvailableWeekdays),
+                // ✅ NEW ENRICHMENT FIELDS
+                WhatIncluded = dto.WhatIncluded,
+                WhatNotIncluded = dto.WhatNotIncluded,
+                WhatToBring = dto.WhatToBring,
+                CancellationPolicy = dto.CancellationPolicy,
+                Languages = dto.Languages,
+                FitnessLevel = dto.FitnessLevel,
+                MinAge = dto.MinAge,
+                ImportantNotes = dto.ImportantNotes
             };
 
             _context.Experiences.Add(exp);
@@ -339,6 +359,15 @@ namespace Backend.Services
             exp.PeakSeasonMultiplier = dto.PeakSeasonMultiplier;
             exp.Status = ExperienceStatus.PendingApproval;
             exp.AvailableWeekdays = string.Join(',', dto.AvailableWeekdays);
+            // ✅ NEW ENRICHMENT FIELDS
+            exp.WhatIncluded = dto.WhatIncluded;
+            exp.WhatNotIncluded = dto.WhatNotIncluded;
+            exp.WhatToBring = dto.WhatToBring;
+            exp.CancellationPolicy = dto.CancellationPolicy;
+            exp.Languages = dto.Languages;
+            exp.FitnessLevel = dto.FitnessLevel;
+            exp.MinAge = dto.MinAge;
+            exp.ImportantNotes = dto.ImportantNotes;
 
             ValidateAvailability(exp, dto);
             await _context.SaveChangesAsync();
@@ -370,6 +399,15 @@ namespace Backend.Services
             exp.WeekendMultiplier = dto.WeekendMultiplier;
             exp.PeakSeasonMultiplier = dto.PeakSeasonMultiplier;
             exp.AvailableWeekdays = string.Join(',', dto.AvailableWeekdays);
+            // ✅ NEW ENRICHMENT FIELDS
+            exp.WhatIncluded = dto.WhatIncluded;
+            exp.WhatNotIncluded = dto.WhatNotIncluded;
+            exp.WhatToBring = dto.WhatToBring;
+            exp.CancellationPolicy = dto.CancellationPolicy;
+            exp.Languages = dto.Languages;
+            exp.FitnessLevel = dto.FitnessLevel;
+            exp.MinAge = dto.MinAge;
+            exp.ImportantNotes = dto.ImportantNotes;
 
             ValidateAvailability(exp, dto);
             await _context.SaveChangesAsync();
@@ -462,7 +500,7 @@ namespace Backend.Services
                 }
                 else if (exp.Destination.CurrentSeason == SeasonType.OffPeak)
                 {
-                    seasonMul = 0.90m; // 10% discount in off-peak
+                    seasonMul = 0.90m;
                     finalPrice *= seasonMul;
                     reasons.Add("Off-peak discount applied (-10%)");
                 }
@@ -550,7 +588,16 @@ namespace Backend.Services
                     .ToList(),
                 Status = e.Status.ToString(),
                 Rating = e.Rating,
-                TotalBookingsCount = e.TotalBookingsCount
+                TotalBookingsCount = e.TotalBookingsCount,
+                // ✅ NEW ENRICHMENT FIELDS
+                WhatIncluded = e.WhatIncluded,
+                WhatNotIncluded = e.WhatNotIncluded,
+                WhatToBring = e.WhatToBring,
+                CancellationPolicy = e.CancellationPolicy,
+                Languages = e.Languages,
+                FitnessLevel = e.FitnessLevel,
+                MinAge = e.MinAge,
+                ImportantNotes = e.ImportantNotes
             };
         }
     }
