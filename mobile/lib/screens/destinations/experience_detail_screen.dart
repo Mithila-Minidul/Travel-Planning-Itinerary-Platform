@@ -4,8 +4,6 @@ import '../../models/experience.dart';
 import '../../models/weather.dart';
 import '../../services/experience_service.dart';
 import '../../services/destination_service.dart';
-import '../trips/trip_builder_screen.dart';
-import '../trips/trip_list_screen.dart';
 
 class ExperienceDetailScreen extends StatefulWidget {
   final String experienceId;
@@ -43,12 +41,9 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
     try {
       final exp = await ExperienceService.getById(widget.experienceId);
       Weather? weather;
-
       try {
         weather = await DestinationService.getWeather(exp.destinationId);
-      } catch (_) {
-        // Weather is optional, ignore if fails
-      }
+      } catch (_) {}
 
       setState(() {
         _experience = exp;
@@ -56,7 +51,6 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
         _loading = false;
       });
 
-      // Start auto-scroll after data loads
       _startAutoScroll();
     } catch (e) {
       setState(() {
@@ -91,6 +85,8 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
         ? _experience!.imageUrls
         : [_experience!.coverImageUrl ?? ''];
   }
+
+  bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +140,7 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
       children: [
         CustomScrollView(
           slivers: [
-            // ✅ SWIPEABLE IMAGE CAROUSEL
+            // ================= IMAGE CAROUSEL =================
             SliverAppBar(
               expandedHeight: 280,
               pinned: true,
@@ -154,13 +150,11 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                 background: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Swipeable images with PageView
                     PageView.builder(
                       controller: _pageController,
                       itemCount: images.length,
                       onPageChanged: (index) {
                         setState(() => _currentImageIndex = index);
-                        // Restart auto-scroll timer on manual swipe
                         _startAutoScroll();
                       },
                       itemBuilder: (context, index) {
@@ -174,17 +168,14 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                                   size: 64, color: Colors.white),
                             ),
                           );
-                        } else {
-                          return Container(
-                            color: Colors.indigo[100],
-                            child: const Icon(Icons.hiking,
-                                size: 64, color: Colors.white),
-                          );
                         }
+                        return Container(
+                          color: Colors.indigo[100],
+                          child: const Icon(Icons.hiking,
+                              size: 64, color: Colors.white),
+                        );
                       },
                     ),
-
-                    // Gradient overlay (blocked from swiping)
                     IgnorePointer(
                       child: Container(
                         decoration: BoxDecoration(
@@ -199,8 +190,6 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                         ),
                       ),
                     ),
-
-                    // Image counter (e.g., "2 / 4")
                     if (images.length > 1)
                       Positioned(
                         top: 100,
@@ -224,8 +213,6 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                           ),
                         ),
                       ),
-
-                    // Pagination dots
                     if (images.length > 1)
                       Positioned(
                         bottom: 16,
@@ -258,7 +245,7 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
               ),
             ),
 
-            // Content
+            // ================= CONTENT =================
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -306,8 +293,7 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                           style: const TextStyle(color: Colors.grey),
                         ),
                         const SizedBox(width: 16),
-                        const Icon(Icons.star,
-                            size: 16, color: Colors.amber),
+                        const Icon(Icons.star, size: 16, color: Colors.amber),
                         const SizedBox(width: 4),
                         Text(
                           '${exp.rating.toStringAsFixed(1)} (${exp.totalBookingsCount} bookings)',
@@ -333,12 +319,39 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                     Row(
                       children: [
                         _buildInfoItem(Icons.place, 'Meeting Point',
-                            exp.meetingPoint.isEmpty
-                                ? 'TBD'
-                                : exp.meetingPoint),
+                            exp.meetingPoint.isEmpty ? 'TBD' : exp.meetingPoint),
                         _buildInfoItem(Icons.person, 'Guide', exp.guideName),
                       ],
                     ),
+
+                    // ✅ NEW: Languages + Fitness Level (if present)
+                    if (_hasText(exp.languages) || _hasText(exp.fitnessLevel)) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          _buildInfoItem(
+                              Icons.language,
+                              'Languages',
+                              _hasText(exp.languages) ? exp.languages! : 'Not specified'),
+                          _buildInfoItem(
+                              Icons.fitness_center,
+                              'Fitness',
+                              _hasText(exp.fitnessLevel) ? exp.fitnessLevel! : 'Not specified'),
+                        ],
+                      ),
+                    ],
+
+                    // ✅ NEW: Minimum Age (if present)
+                    if (exp.minAge != null && exp.minAge! > 0) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          _buildInfoItem(Icons.cake, 'Minimum Age',
+                              '${exp.minAge} years'),
+                          const Spacer(),
+                        ],
+                      ),
+                    ],
 
                     const SizedBox(height: 24),
                     const Divider(),
@@ -347,8 +360,8 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                     // Description
                     const Text(
                       'About this Experience',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -360,6 +373,48 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                       ),
                     ),
 
+                    // ✅ NEW: What's Included
+                    if (_hasText(exp.whatIncluded)) ...[
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 20),
+                      const Text(
+                        "What's Included",
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildBulletList(exp.whatIncluded!, Colors.green),
+                    ],
+
+                    // ✅ NEW: What's NOT Included
+                    if (_hasText(exp.whatNotIncluded)) ...[
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 20),
+                      const Text(
+                        "What's NOT Included",
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildBulletList(exp.whatNotIncluded!, Colors.red),
+                    ],
+
+                    // ✅ NEW: What to Bring
+                    if (_hasText(exp.whatToBring)) ...[
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'What to Bring',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildBulletList(exp.whatToBring!, Colors.indigo),
+                    ],
+
                     const SizedBox(height: 24),
                     const Divider(),
                     const SizedBox(height: 20),
@@ -367,8 +422,8 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                     // Availability
                     const Text(
                       'Availability',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
                     Wrap(
@@ -398,6 +453,75 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                       ],
                     ),
 
+                    // ✅ NEW: Cancellation Policy
+                    if (_hasText(exp.cancellationPolicy)) ...[
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Cancellation Policy',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.amber[200]!),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.event_busy,
+                                size: 20, color: Colors.orange),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                exp.cancellationPolicy!,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // ✅ NEW: Important Notes
+                    if (_hasText(exp.importantNotes)) ...[
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Important Notes',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue[200]!),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline,
+                                size: 20, color: Colors.blue),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                exp.importantNotes!,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     // Weather
                     if (_weather != null) ...[
                       const SizedBox(height: 24),
@@ -405,8 +529,8 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                       const SizedBox(height: 20),
                       const Text(
                         'Weather',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
+                        style:
+                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
                       Container(
@@ -458,7 +582,7 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                       ),
                     ],
 
-                    const SizedBox(height: 120), // space for bottom bar
+                    const SizedBox(height: 120),
                   ],
                 ),
               ),
@@ -466,7 +590,7 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
           ],
         ),
 
-        // ✅ FLOATING BOTTOM PRICE BAR
+        // ================= BOTTOM BAR (Price only — no Create Trip button) =================
         Positioned(
           left: 0,
           right: 0,
@@ -507,25 +631,14 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () async {
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => TripBuilderScreen(
-        destinationId: exp.destinationId,
-        destinationName: exp.destinationName,
-      ),
-    ),
-  );
-
-  if (result != null && mounted) {
-    // Trip was created successfully - go to My Trips
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const TripListScreen()),
-    );
-  }
-},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Booking coming soon — use Trip Creation at the destination.'),
+                          backgroundColor: Colors.indigo,
+                        ),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.indigo,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -534,7 +647,7 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
                       ),
                     ),
                     child: const Text(
-                      'Create Trip with AI',
+                      'Book Now',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.white,
@@ -585,6 +698,44 @@ class _ExperienceDetailScreenState extends State<ExperienceDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Renders a comma-separated string (or newline-separated) as bullet points
+  Widget _buildBulletList(String text, Color accentColor) {
+    final items = text
+        .split(RegExp(r'[,\n]'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: items.map((item) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Icon(Icons.circle, size: 6, color: accentColor),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  item,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[800],
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 

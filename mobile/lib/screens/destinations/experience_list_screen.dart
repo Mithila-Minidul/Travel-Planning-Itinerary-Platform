@@ -5,6 +5,8 @@ import '../../models/category.dart';
 import '../../services/experience_service.dart';
 import '../../services/category_service.dart';
 import 'experience_detail_screen.dart';
+import '../trips/trip_builder_screen.dart';
+import '../trips/trip_list_screen.dart';
 
 class ExperienceListScreen extends StatefulWidget {
   final Destination destination;
@@ -55,45 +57,108 @@ class _ExperienceListScreenState extends State<ExperienceListScreen> {
       _selectedCategoryId = categoryId;
       _filteredExperiences = categoryId == null
           ? _allExperiences
-          : _allExperiences
-              .where((e) => e.categoryId == categoryId)
-              .toList();
+          : _allExperiences.where((e) => e.categoryId == categoryId).toList();
     });
+  }
+
+  bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
+
+  /// ✅ Opens the Trip Builder for this destination
+  Future<void> _openTripBuilder() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TripBuilderScreen(
+          destinationId: widget.destination.id,
+          destinationName: widget.destination.name,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const TripListScreen()),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final dest = widget.destination;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.destination.name),
+        title: Text(dest.name),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
       ),
       body: Column(
         children: [
-          // Header info
+          // ================= HEADER =================
           Container(
             color: Colors.white,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Location
                 Row(
                   children: [
-                    const Icon(Icons.location_on,
-                        size: 16, color: Colors.indigo),
+                    const Icon(Icons.location_on, size: 16, color: Colors.indigo),
                     const SizedBox(width: 4),
                     Text(
-                      '${widget.destination.provinceState}, ${widget.destination.country}',
+                      '${dest.provinceState}, ${dest.country}',
                       style: const TextStyle(color: Colors.grey),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
+
+                // Description
                 Text(
-                  widget.destination.description,
+                  dest.description,
                   style: TextStyle(color: Colors.grey[700], height: 1.4),
                 ),
+
+                // ✅ NEW: Best Time to Visit / Ideal Duration / Highlights
+                if (_hasText(dest.bestTimeToVisit) ||
+                    _hasText(dest.idealDuration) ||
+                    _hasText(dest.highlights)) ...[
+                  const SizedBox(height: 14),
+                  if (_hasText(dest.bestTimeToVisit) || _hasText(dest.idealDuration))
+                    Row(
+                      children: [
+                        if (_hasText(dest.bestTimeToVisit))
+                          Expanded(
+                            child: _miniInfoTile(
+                              Icons.event,
+                              'Best Time',
+                              dest.bestTimeToVisit!,
+                            ),
+                          ),
+                        if (_hasText(dest.bestTimeToVisit) && _hasText(dest.idealDuration))
+                          const SizedBox(width: 10),
+                        if (_hasText(dest.idealDuration))
+                          Expanded(
+                            child: _miniInfoTile(
+                              Icons.schedule,
+                              'Ideal Duration',
+                              dest.idealDuration!,
+                            ),
+                          ),
+                      ],
+                    ),
+                  if (_hasText(dest.highlights)) ...[
+                    const SizedBox(height: 10),
+                    _miniInfoTile(
+                      Icons.star,
+                      'Highlights',
+                      dest.highlights!,
+                    ),
+                  ],
+                ],
+
                 const SizedBox(height: 16),
 
                 // Category filter chips
@@ -115,8 +180,7 @@ class _ExperienceListScreenState extends State<ExperienceListScreen> {
                         ),
                         const SizedBox(width: 8),
                         ..._categories.map((cat) {
-                          final isSelected =
-                              _selectedCategoryId == cat.id;
+                          final isSelected = _selectedCategoryId == cat.id;
                           return Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: ChoiceChip(
@@ -135,7 +199,7 @@ class _ExperienceListScreenState extends State<ExperienceListScreen> {
             ),
           ),
 
-          // Experience List
+          // ================= EXPERIENCE LIST =================
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -154,6 +218,57 @@ class _ExperienceListScreenState extends State<ExperienceListScreen> {
                               },
                             ),
                           ),
+          ),
+        ],
+      ),
+
+      // ✅ NEW: Floating "Create Trip with AI" button for this destination
+      floatingActionButton: _loading
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _openTripBuilder,
+              backgroundColor: Colors.indigo,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text(
+                'Create Trip with AI',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+    );
+  }
+
+  Widget _miniInfoTile(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.indigo[50],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.indigo),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.indigo,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -217,12 +332,10 @@ class _ExperienceListScreenState extends State<ExperienceListScreen> {
         },
         child: Row(
           children: [
-            // Image thumbnail
             SizedBox(
               width: 120,
               height: 140,
-              child: exp.coverImageUrl != null &&
-                      exp.coverImageUrl!.isNotEmpty
+              child: exp.coverImageUrl != null && exp.coverImageUrl!.isNotEmpty
                   ? Image.network(
                       exp.coverImageUrl!,
                       fit: BoxFit.cover,
@@ -237,8 +350,6 @@ class _ExperienceListScreenState extends State<ExperienceListScreen> {
                           size: 40, color: Colors.indigo),
                     ),
             ),
-
-            // Content
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -279,8 +390,7 @@ class _ExperienceListScreenState extends State<ExperienceListScreen> {
                         const SizedBox(width: 2),
                         Text(
                           '${exp.durationHours}h',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey),
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
                     ),
