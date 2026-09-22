@@ -76,6 +76,8 @@ namespace Backend.DTOs
 
         // Sum of all stop costs — useful for "over budget" warnings
         public decimal TotalEstimatedCost { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
 
         public List<TripStopDto> TripStops { get; set; } = new();
     }

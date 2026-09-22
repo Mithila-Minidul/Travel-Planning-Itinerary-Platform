@@ -68,6 +68,8 @@ namespace Backend.Controllers
                     TravelerName = t.Traveler.FullName,
                     TravelAgentName = t.TravelAgent != null ? t.TravelAgent.FullName : null,
                     TotalEstimatedCost = t.TripStops.Sum(s => s.EstimatedCost),
+                    CreatedAt = t.CreatedAt,
+                    UpdatedAt = t.UpdatedAt,
                     TripStops = t.TripStops.Select(s => new TripStopDto
                     {
                         ExperienceId = s.ExperienceId,
@@ -123,6 +125,8 @@ namespace Backend.Controllers
                 TravelerName = trip.Traveler.FullName,
                 TravelAgentName = trip.TravelAgent?.FullName,
                 TotalEstimatedCost = trip.TripStops.Sum(s => s.EstimatedCost),
+                CreatedAt = trip.CreatedAt,
+                UpdatedAt = trip.UpdatedAt,
                 TripStops = trip.TripStops
                     .OrderBy(s => s.DayNumber).ThenBy(s => s.OrderIndex)
                     .Select(s => new TripStopDto
