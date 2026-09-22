@@ -27,8 +27,6 @@ namespace Backend.Controllers
 
         // ============================================================
         // GET: api/Trips
-        // Admin / TravelAgent -> all trips
-        // Traveler -> only their own trips
         // ============================================================
         [Authorize(Roles = "Admin, TravelAgent, Traveler")]
         [HttpGet]
@@ -44,6 +42,7 @@ namespace Backend.Controllers
                 .Include(t => t.Traveler)
                 .Include(t => t.TravelAgent)
                 .Include(t => t.Destination)
+                .Include(t => t.Guide).ThenInclude(g => g.User)   // ✅ NEW
                 .AsQueryable();
 
             if (userRole == "Traveler")
@@ -67,6 +66,10 @@ namespace Backend.Controllers
                     Status = t.Status,
                     TravelerName = t.Traveler.FullName,
                     TravelAgentName = t.TravelAgent != null ? t.TravelAgent.FullName : null,
+                    // ✅ NEW
+                    GuideId = t.GuideId,
+                    GuideName = t.Guide != null && t.Guide.User != null ? t.Guide.User.FullName : null,
+                    GuideCity = t.Guide != null ? t.Guide.City : null,
                     TotalEstimatedCost = t.TripStops.Sum(s => s.EstimatedCost),
                     CreatedAt = t.CreatedAt,
                     UpdatedAt = t.UpdatedAt,
@@ -88,7 +91,6 @@ namespace Backend.Controllers
 
         // ============================================================
         // GET: api/Trips/{id}
-        // Trip Detail page
         // ============================================================
         [Authorize(Roles = "Admin, TravelAgent, Traveler")]
         [HttpGet("{id:guid}")]
@@ -102,11 +104,11 @@ namespace Backend.Controllers
                 .Include(t => t.Traveler)
                 .Include(t => t.TravelAgent)
                 .Include(t => t.Destination)
+                .Include(t => t.Guide).ThenInclude(g => g.User)   // ✅ NEW
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (trip == null) return NotFound(new { message = "Trip not found." });
 
-            // Travelers can only view their own trips
             if (userRole == "Traveler" && trip.TravelerId.ToString() != userIdClaim)
                 return Forbid();
 
@@ -124,6 +126,10 @@ namespace Backend.Controllers
                 Status = trip.Status,
                 TravelerName = trip.Traveler.FullName,
                 TravelAgentName = trip.TravelAgent?.FullName,
+                // ✅ NEW
+                GuideId = trip.GuideId,
+                GuideName = trip.Guide?.User?.FullName,
+                GuideCity = trip.Guide?.City,
                 TotalEstimatedCost = trip.TripStops.Sum(s => s.EstimatedCost),
                 CreatedAt = trip.CreatedAt,
                 UpdatedAt = trip.UpdatedAt,
@@ -146,8 +152,6 @@ namespace Backend.Controllers
 
         // ============================================================
         // POST: api/Trips
-        // ONLY Traveler (from Flutter Mobile)
-        // Calls the Planner Agent to generate TripStops
         // ============================================================
         [Authorize(Roles = "Traveler")]
         [HttpPost]
@@ -156,12 +160,19 @@ namespace Backend.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
 
-            // Sanity: verify destination exists
             var destinationExists = await _context.Destinations.AnyAsync(d => d.Id == request.DestinationId);
             if (!destinationExists)
                 return BadRequest(new { message = "Destination not found." });
 
-            // 1. Create the Trip shell
+            // 1. Run Planner Agent → returns stops + ONE winning guide
+            var plannerResult = await _plannerAgent.GenerateItineraryAsync(
+                request.DestinationId,
+                request.StartDate,
+                request.EndDate,
+                request.Budget,
+                request.Interests ?? string.Empty);
+
+            // 2. Create Trip with the winning guide
             var trip = new Trip
             {
                 Title = request.Title,
@@ -173,20 +184,11 @@ namespace Backend.Controllers
                 Budget = request.Budget,
                 Constraints = request.Constraints ?? string.Empty,
                 Status = "Pending",
-                TravelerId = Guid.Parse(userIdClaim)
+                TravelerId = Guid.Parse(userIdClaim),
+                GuideId = plannerResult.WinningGuideId,   // ✅ NEW
+                TripStops = plannerResult.Stops
             };
 
-            // 2. Call the Planner Agent to generate the itinerary
-            var generatedStops = await _plannerAgent.GenerateItineraryAsync(
-                request.DestinationId,
-                request.StartDate,
-                request.EndDate,
-                request.Budget,
-                request.Interests ?? string.Empty);
-
-            trip.TripStops = generatedStops;
-
-            // 3. Save
             _context.Trips.Add(trip);
             await _context.SaveChangesAsync();
 
@@ -194,13 +196,14 @@ namespace Backend.Controllers
             {
                 message = "Trip created and itinerary generated.",
                 tripId = trip.Id,
-                stopsGenerated = generatedStops.Count
+                stopsGenerated = plannerResult.Stops.Count,
+                guideId = plannerResult.WinningGuideId,
+                guideName = plannerResult.WinningGuideName
             });
         }
 
         // ============================================================
         // PATCH: api/Trips/{id}/review
-        // ONLY TravelAgent / Admin
         // ============================================================
         [Authorize(Roles = "TravelAgent")]
         [HttpPatch("{id:guid}/review")]
