@@ -7,14 +7,17 @@ from models.schemas import (
     ResearchAgentResponse,
     PlannerRequest,
     PlannerResponse,
+    BudgetRequest,
+    BudgetResponse,
 )
 from agents.research_agent import ResearchAgent
 from agents.planner_agent import PlannerAgent
+from agents.budget_agent import BudgetAgent
 
 app = FastAPI(
     title="Travel App - Agentic AI Subsystem",
     description="Microservice running the TripCraft agents",
-    version="1.2.0",
+    version="1.3.0",
 )
 
 app.add_middleware(
@@ -27,6 +30,7 @@ app.add_middleware(
 
 research_agent = ResearchAgent()
 planner_agent = PlannerAgent()
+budget_agent = BudgetAgent()
 
 
 # ================= HEALTH =================
@@ -37,15 +41,15 @@ def health_check():
         "agents": [
             "Planner Agent",
             "Research Agent",
+            "Budget Agent",
         ],
-        "version": "1.2.0",
+        "version": "1.3.0",
     }
 
 
 # ================= RESEARCH AGENT (Member 1) =================
 @app.post("/api/agents/research", response_model=ResearchAgentResponse)
 async def run_research_agent(request: ResearchAgentRequest):
-    """Run only the Research Agent in isolation."""
     try:
         return await research_agent.execute(request)
     except Exception as e:
@@ -55,9 +59,17 @@ async def run_research_agent(request: ResearchAgentRequest):
 # ================= PLANNER AGENT (Member 2) =================
 @app.post("/api/agents/planner", response_model=PlannerResponse)
 async def run_planner_agent(request: PlannerRequest):
-    """Run only the Planner Agent in isolation."""
     try:
         return await planner_agent.execute(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
+
+
+# ================= BUDGET AGENT (Member 4) =================
+@app.post("/api/agents/budget", response_model=BudgetResponse)
+async def run_budget_agent(request: BudgetRequest):
+    try:
+        return await budget_agent.execute(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
 
