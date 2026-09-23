@@ -42,7 +42,7 @@ namespace Backend.Controllers
                 .Include(t => t.Traveler)
                 .Include(t => t.TravelAgent)
                 .Include(t => t.Destination)
-                .Include(t => t.Guide).ThenInclude(g => g.User)   // ✅ NEW
+                .Include(t => t.Guide).ThenInclude(g => g.User)
                 .AsQueryable();
 
             if (userRole == "Traveler")
@@ -66,10 +66,16 @@ namespace Backend.Controllers
                     Status = t.Status,
                     TravelerName = t.Traveler.FullName,
                     TravelAgentName = t.TravelAgent != null ? t.TravelAgent.FullName : null,
-                    // ✅ NEW
                     GuideId = t.GuideId,
                     GuideName = t.Guide != null && t.Guide.User != null ? t.Guide.User.FullName : null,
                     GuideCity = t.Guide != null ? t.Guide.City : null,
+                    // ✅ NEW fields
+                    TravelGroup = t.TravelGroup,
+                    NumberOfTravelers = t.NumberOfTravelers,
+                    BudgetTier = t.BudgetTier,
+                    TravelPace = t.TravelPace,
+                    PreferredTimes = t.PreferredTimes,
+                    SpecialRequests = t.SpecialRequests,
                     TotalEstimatedCost = t.TripStops.Sum(s => s.EstimatedCost),
                     CreatedAt = t.CreatedAt,
                     UpdatedAt = t.UpdatedAt,
@@ -104,7 +110,7 @@ namespace Backend.Controllers
                 .Include(t => t.Traveler)
                 .Include(t => t.TravelAgent)
                 .Include(t => t.Destination)
-                .Include(t => t.Guide).ThenInclude(g => g.User)   // ✅ NEW
+                .Include(t => t.Guide).ThenInclude(g => g.User)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (trip == null) return NotFound(new { message = "Trip not found." });
@@ -126,10 +132,16 @@ namespace Backend.Controllers
                 Status = trip.Status,
                 TravelerName = trip.Traveler.FullName,
                 TravelAgentName = trip.TravelAgent?.FullName,
-                // ✅ NEW
                 GuideId = trip.GuideId,
                 GuideName = trip.Guide?.User?.FullName,
                 GuideCity = trip.Guide?.City,
+                // ✅ NEW fields
+                TravelGroup = trip.TravelGroup,
+                NumberOfTravelers = trip.NumberOfTravelers,
+                BudgetTier = trip.BudgetTier,
+                TravelPace = trip.TravelPace,
+                PreferredTimes = trip.PreferredTimes,
+                SpecialRequests = trip.SpecialRequests,
                 TotalEstimatedCost = trip.TripStops.Sum(s => s.EstimatedCost),
                 CreatedAt = trip.CreatedAt,
                 UpdatedAt = trip.UpdatedAt,
@@ -164,7 +176,7 @@ namespace Backend.Controllers
             if (!destinationExists)
                 return BadRequest(new { message = "Destination not found." });
 
-            // 1. Run Planner Agent → returns stops + ONE winning guide
+            // Run Planner Agent → returns stops + ONE winning guide
             var plannerResult = await _plannerAgent.GenerateItineraryAsync(
                 request.DestinationId,
                 request.StartDate,
@@ -172,7 +184,6 @@ namespace Backend.Controllers
                 request.Budget,
                 request.Interests ?? string.Empty);
 
-            // 2. Create Trip with the winning guide
             var trip = new Trip
             {
                 Title = request.Title,
@@ -185,8 +196,15 @@ namespace Backend.Controllers
                 Constraints = request.Constraints ?? string.Empty,
                 Status = "Pending",
                 TravelerId = Guid.Parse(userIdClaim),
-                GuideId = plannerResult.WinningGuideId,   // ✅ NEW
-                TripStops = plannerResult.Stops
+                GuideId = plannerResult.WinningGuideId,
+                TripStops = plannerResult.Stops,
+                // ✅ NEW fields
+                TravelGroup = request.TravelGroup,
+                NumberOfTravelers = request.NumberOfTravelers,
+                BudgetTier = request.BudgetTier,
+                TravelPace = request.TravelPace,
+                PreferredTimes = request.PreferredTimes,
+                SpecialRequests = request.SpecialRequests
             };
 
             _context.Trips.Add(trip);
