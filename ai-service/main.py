@@ -9,15 +9,18 @@ from models.schemas import (
     PlannerResponse,
     BudgetRequest,
     BudgetResponse,
+    ApprovalRequest,
+    ApprovalResponse,
 )
 from agents.research_agent import ResearchAgent
 from agents.planner_agent import PlannerAgent
 from agents.budget_agent import BudgetAgent
+from agents.approval_agent import ApprovalAgent
 
 app = FastAPI(
     title="Travel App - Agentic AI Subsystem",
     description="Microservice running the TripCraft agents",
-    version="1.3.0",
+    version="1.4.0",
 )
 
 app.add_middleware(
@@ -31,6 +34,7 @@ app.add_middleware(
 research_agent = ResearchAgent()
 planner_agent = PlannerAgent()
 budget_agent = BudgetAgent()
+approval_agent = ApprovalAgent()
 
 
 # ================= HEALTH =================
@@ -42,8 +46,9 @@ def health_check():
             "Planner Agent",
             "Research Agent",
             "Budget Agent",
+            "Approval Agent",
         ],
-        "version": "1.3.0",
+        "version": "1.4.0",
     }
 
 
@@ -70,6 +75,15 @@ async def run_planner_agent(request: PlannerRequest):
 async def run_budget_agent(request: BudgetRequest):
     try:
         return await budget_agent.execute(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
+
+
+# ================= APPROVAL AGENT (Member 3) =================
+@app.post("/api/agents/approval", response_model=ApprovalResponse)
+async def run_approval_agent(request: ApprovalRequest):
+    try:
+        return await approval_agent.execute(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
 
