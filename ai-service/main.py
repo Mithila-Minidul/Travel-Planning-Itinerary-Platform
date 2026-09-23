@@ -11,16 +11,19 @@ from models.schemas import (
     BudgetResponse,
     ApprovalRequest,
     ApprovalResponse,
+    ItineraryRequest,
+    ItineraryResponse,
 )
 from agents.research_agent import ResearchAgent
 from agents.planner_agent import PlannerAgent
 from agents.budget_agent import BudgetAgent
 from agents.approval_agent import ApprovalAgent
+from workflows.trip_planner_workflow import TripPlannerWorkflow
 
 app = FastAPI(
     title="Travel App - Agentic AI Subsystem",
-    description="Microservice running the TripCraft agents",
-    version="1.4.0",
+    description="Microservice running the TripCraft 4-agent workflow",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -31,10 +34,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Individual agents (used for isolated testing)
 research_agent = ResearchAgent()
 planner_agent = PlannerAgent()
 budget_agent = BudgetAgent()
 approval_agent = ApprovalAgent()
+
+# Orchestrator (chains all four)
+trip_planner_workflow = TripPlannerWorkflow()
 
 
 # ================= HEALTH =================
@@ -48,11 +55,12 @@ def health_check():
             "Budget Agent",
             "Approval Agent",
         ],
-        "version": "1.4.0",
+        "orchestrator": "TripPlannerWorkflow",
+        "version": "2.0.0",
     }
 
 
-# ================= RESEARCH AGENT (Member 1) =================
+# ================= INDIVIDUAL AGENT ENDPOINTS =================
 @app.post("/api/agents/research", response_model=ResearchAgentResponse)
 async def run_research_agent(request: ResearchAgentRequest):
     try:
@@ -61,7 +69,6 @@ async def run_research_agent(request: ResearchAgentRequest):
         raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
 
 
-# ================= PLANNER AGENT (Member 2) =================
 @app.post("/api/agents/planner", response_model=PlannerResponse)
 async def run_planner_agent(request: PlannerRequest):
     try:
@@ -70,7 +77,6 @@ async def run_planner_agent(request: PlannerRequest):
         raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
 
 
-# ================= BUDGET AGENT (Member 4) =================
 @app.post("/api/agents/budget", response_model=BudgetResponse)
 async def run_budget_agent(request: BudgetRequest):
     try:
@@ -79,13 +85,22 @@ async def run_budget_agent(request: BudgetRequest):
         raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
 
 
-# ================= APPROVAL AGENT (Member 3) =================
 @app.post("/api/agents/approval", response_model=ApprovalResponse)
 async def run_approval_agent(request: ApprovalRequest):
     try:
         return await approval_agent.execute(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
+
+
+# ================= FULL 4-AGENT WORKFLOW =================
+@app.post("/api/agents/generate-itinerary", response_model=ItineraryResponse)
+async def generate_itinerary(request: ItineraryRequest):
+    """Run the complete 4-agent workflow: Planner → Research → Budget → Approval."""
+    try:
+        return await trip_planner_workflow.run(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Workflow Error: {str(e)}")
 
 
 if __name__ == "__main__":
