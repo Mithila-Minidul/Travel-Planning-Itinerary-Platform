@@ -59,6 +59,14 @@ const TripDetailPage = () => {
     ? 'bg-rose-100 text-rose-700'
     : 'bg-amber-100 text-amber-700';
 
+  // Check if any trip preferences exist
+  const hasPreferences =
+    (trip.travelGroup && trip.travelGroup.length > 0) ||
+    (trip.budgetTier && trip.budgetTier.length > 0) ||
+    (trip.travelPace && trip.travelPace.length > 0) ||
+    (trip.preferredTimes && trip.preferredTimes.length > 0) ||
+    (trip.specialRequests && trip.specialRequests.length > 0);
+
   return (
     <div>
       <button
@@ -129,27 +137,72 @@ const TripDetailPage = () => {
           </div>
         </div>
 
-        {/* ✅ NEW: Assigned Local Guide */}
-{trip.guideName && (
-  <div className="mt-4 rounded-lg bg-indigo-50 border border-indigo-100 p-3 flex items-center gap-3">
-    <div className="h-10 w-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
-      {trip.guideName.charAt(0).toUpperCase()}
-    </div>
-    <div>
-      <p className="text-xs text-gray-500">Assigned Local Guide</p>
-      <p className="font-semibold text-gray-800">{trip.guideName}</p>
-      {trip.guideCity && (
-        <p className="text-xs text-gray-500">📍 {trip.guideCity}</p>
-      )}
-    </div>
-  </div>
-)}
+        {/* ================= ASSIGNED LOCAL GUIDE ================= */}
+        {trip.guideName && (
+          <div className="mt-4 rounded-lg bg-indigo-50 border border-indigo-100 p-3 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
+              {trip.guideName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Assigned Local Guide</p>
+              <p className="font-semibold text-gray-800">{trip.guideName}</p>
+              {trip.guideCity && (
+                <p className="text-xs text-gray-500">📍 {trip.guideCity}</p>
+              )}
+            </div>
+          </div>
+        )}
 
-{trip.travelAgentName && (
-  <p className="mt-3 text-xs text-gray-500">
-    Reviewed by: <strong>{trip.travelAgentName}</strong>
-  </p>
-)}
+        {/* ================= ✅ NEW: TRIP PREFERENCES ================= */}
+        {hasPreferences && (
+          <div className="mt-4 rounded-lg bg-slate-50 border border-slate-200 p-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              Trip Preferences
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              {trip.travelGroup && (
+                <div>
+                  <p className="text-xs text-gray-500">Group</p>
+                  <p className="font-medium text-gray-800">
+                    {trip.travelGroup} ({trip.numberOfTravelers || 1})
+                  </p>
+                </div>
+              )}
+              {trip.budgetTier && (
+                <div>
+                  <p className="text-xs text-gray-500">Budget Style</p>
+                  <p className="font-medium text-gray-800">{trip.budgetTier}</p>
+                </div>
+              )}
+              {trip.travelPace && (
+                <div>
+                  <p className="text-xs text-gray-500">Pace</p>
+                  <p className="font-medium text-gray-800">{trip.travelPace}</p>
+                </div>
+              )}
+              {trip.preferredTimes && (
+                <div>
+                  <p className="text-xs text-gray-500">Preferred Times</p>
+                  <p className="font-medium text-gray-800">
+                    {trip.preferredTimes.split(',').join(', ')}
+                  </p>
+                </div>
+              )}
+            </div>
+            {trip.specialRequests && (
+              <div className="mt-3 pt-3 border-t border-slate-200">
+                <p className="text-xs text-gray-500">Special Requests</p>
+                <p className="text-sm text-gray-700 mt-1">{trip.specialRequests}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {trip.travelAgentName && (
+          <p className="mt-3 text-xs text-gray-500">
+            Reviewed by: <strong>{trip.travelAgentName}</strong>
+          </p>
+        )}
       </div>
 
       {/* ================= ITINERARY ================= */}
@@ -224,6 +277,7 @@ const TripDetailPage = () => {
           </div>
         </div>
       )}
+
       {/* ================= ADMIN INFO (View-only) ================= */}
       {trip.status === 'Pending' && isAdmin && (
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
