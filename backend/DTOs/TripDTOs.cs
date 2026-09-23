@@ -30,6 +30,28 @@ namespace Backend.DTOs
 
         [MaxLength(500)]
         public string Interests { get; set; } = string.Empty;
+
+        // ============================================================
+        // ✅ NEW: Trip Builder Redesign Fields
+        // ============================================================
+
+        [MaxLength(50)]
+        public string? TravelGroup { get; set; }
+
+        [Range(1, 50)]
+        public int NumberOfTravelers { get; set; } = 1;
+
+        [MaxLength(50)]
+        public string? BudgetTier { get; set; }
+
+        [MaxLength(50)]
+        public string? TravelPace { get; set; }
+
+        [MaxLength(100)]
+        public string? PreferredTimes { get; set; }
+
+        [MaxLength(1000)]
+        public string? SpecialRequests { get; set; }
     }
 
     // ================= STOP =================
@@ -72,10 +94,20 @@ namespace Backend.DTOs
         public string TravelerName { get; set; } = string.Empty;
         public string? TravelAgentName { get; set; }
 
-        // ✅ NEW: Assigned Local Guide (ONE guide per trip)
+        // Assigned Local Guide
         public Guid? GuideId { get; set; }
         public string? GuideName { get; set; }
         public string? GuideCity { get; set; }
+
+        // ============================================================
+        // ✅ NEW: Trip Builder Redesign Fields (response)
+        // ============================================================
+        public string? TravelGroup { get; set; }
+        public int NumberOfTravelers { get; set; }
+        public string? BudgetTier { get; set; }
+        public string? TravelPace { get; set; }
+        public string? PreferredTimes { get; set; }
+        public string? SpecialRequests { get; set; }
 
         public decimal TotalEstimatedCost { get; set; }
         public DateTime CreatedAt { get; set; }
