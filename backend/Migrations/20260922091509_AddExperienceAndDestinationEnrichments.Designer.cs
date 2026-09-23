@@ -3,6 +3,7 @@ using System;
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260922091509_AddExperienceAndDestinationEnrichments")]
+    partial class AddExperienceAndDestinationEnrichments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -65,7 +68,7 @@ namespace backend.Migrations
                             IconName = "hiking",
                             IsActive = true,
                             Name = "Hiking",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1054)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5645)
                         },
                         new
                         {
@@ -75,7 +78,7 @@ namespace backend.Migrations
                             IconName = "tea",
                             IsActive = true,
                             Name = "Tea & Plantation",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1065)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5651)
                         },
                         new
                         {
@@ -85,7 +88,7 @@ namespace backend.Migrations
                             IconName = "temple",
                             IsActive = true,
                             Name = "Culture & Heritage",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1070)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5654)
                         },
                         new
                         {
@@ -95,7 +98,7 @@ namespace backend.Migrations
                             IconName = "beach",
                             IsActive = true,
                             Name = "Beach & Surfing",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1075)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5658)
                         },
                         new
                         {
@@ -105,7 +108,7 @@ namespace backend.Migrations
                             IconName = "wildlife",
                             IsActive = true,
                             Name = "Wildlife & Safari",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1079)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5675)
                         },
                         new
                         {
@@ -115,7 +118,7 @@ namespace backend.Migrations
                             IconName = "train",
                             IsActive = true,
                             Name = "Train Journeys",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1083)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5678)
                         },
                         new
                         {
@@ -125,7 +128,7 @@ namespace backend.Migrations
                             IconName = "nature",
                             IsActive = true,
                             Name = "Nature & Waterfalls",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1106)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5681)
                         },
                         new
                         {
@@ -135,7 +138,7 @@ namespace backend.Migrations
                             IconName = "food",
                             IsActive = true,
                             Name = "Food & Cooking",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1111)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5684)
                         },
                         new
                         {
@@ -145,7 +148,7 @@ namespace backend.Migrations
                             IconName = "festival",
                             IsActive = true,
                             Name = "Festivals & Events",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1277)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5687)
                         });
                 });
 
@@ -225,7 +228,7 @@ namespace backend.Migrations
                             Longitude = 81.046599999999998,
                             Name = "Ella",
                             ProvinceState = "Uva Province",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1422)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5778)
                         },
                         new
                         {
@@ -239,7 +242,7 @@ namespace backend.Migrations
                             Longitude = 80.633700000000005,
                             Name = "Kandy",
                             ProvinceState = "Central Province",
-                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1432)
+                            UpdatedAt = new DateTime(2026, 9, 22, 9, 15, 8, 959, DateTimeKind.Utc).AddTicks(5784)
                         });
                 });
 
@@ -439,10 +442,6 @@ namespace backend.Migrations
                     b.Property<decimal>("Budget")
                         .HasColumnType("numeric");
 
-                    b.Property<string>("BudgetTier")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<string>("Constraints")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -457,9 +456,6 @@ namespace backend.Migrations
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("GuideId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Interests")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -468,19 +464,8 @@ namespace backend.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("NumberOfTravelers")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Objective")
                         .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("PreferredTimes")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("SpecialRequests")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
@@ -500,14 +485,6 @@ namespace backend.Migrations
                     b.Property<Guid?>("TravelAgentId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("TravelGroup")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("TravelPace")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<Guid>("TravelerId")
                         .HasColumnType("uuid");
 
@@ -517,8 +494,6 @@ namespace backend.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DestinationId");
-
-                    b.HasIndex("GuideId");
 
                     b.HasIndex("TravelAgentId");
 
@@ -647,7 +622,7 @@ namespace backend.Migrations
                             Email = "admin@travelapp.com",
                             FullName = "System Administrator",
                             IsActive = true,
-                            PasswordHash = "$2a$11$JlJ.Fny92I2fdDYAqiXYx.Y5Ph0dPyQUi/NwWeDo0Af1IqRNvcE7S",
+                            PasswordHash = "$2a$11$YgMGRT/vI6lgFEkqZQ3FPecmlA1NZFfsFAG0pqJF0eJrxTdhSbyCm",
                             PhoneNumber = "+94770000000",
                             Role = "Admin",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
@@ -700,11 +675,6 @@ namespace backend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Backend.Models.LocalGuide", "Guide")
-                        .WithMany()
-                        .HasForeignKey("GuideId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("Backend.Models.User", "TravelAgent")
                         .WithMany()
                         .HasForeignKey("TravelAgentId")
@@ -717,8 +687,6 @@ namespace backend.Migrations
                         .IsRequired();
 
                     b.Navigation("Destination");
-
-                    b.Navigation("Guide");
 
                     b.Navigation("TravelAgent");
 

@@ -18,7 +18,7 @@ const ExperienceForm = () => {
   const [destinations, setDestinations] = useState([]);
   const [categories, setCategories] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
-  
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -32,6 +32,15 @@ const ExperienceForm = () => {
     startTime: '08:00',
     endTime: '12:00',
     imageUrls: [],
+    // ✅ NEW ENRICHMENT FIELDS
+    whatIncluded: '',
+    whatNotIncluded: '',
+    whatToBring: '',
+    cancellationPolicy: '',
+    languages: '',
+    fitnessLevel: '',
+    minAge: '',
+    importantNotes: '',
   });
 
   useEffect(() => {
@@ -62,6 +71,15 @@ const ExperienceForm = () => {
         startTime: experience.startTime || '08:00',
         endTime: experience.endTime || '12:00',
         imageUrls,
+        // ✅ NEW
+        whatIncluded: experience.whatIncluded || '',
+        whatNotIncluded: experience.whatNotIncluded || '',
+        whatToBring: experience.whatToBring || '',
+        cancellationPolicy: experience.cancellationPolicy || '',
+        languages: experience.languages || '',
+        fitnessLevel: experience.fitnessLevel || '',
+        minAge: experience.minAge ?? '',
+        importantNotes: experience.importantNotes || '',
       });
       setImagePreviews(imageUrls);
     } catch (error) {
@@ -169,6 +187,8 @@ const ExperienceForm = () => {
         basePrice: parseFloat(formData.basePrice),
         durationHours: parseInt(formData.durationHours),
         maxCapacity: parseInt(formData.maxCapacity),
+        // ✅ minAge: empty string → null, otherwise number
+        minAge: formData.minAge === '' ? null : parseInt(formData.minAge),
       };
       if (isEditing) {
         await experienceAPI.update(id, payload);
@@ -191,9 +211,10 @@ const ExperienceForm = () => {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">{isEditing ? 'Edit Experience' : 'Add New Experience'}</h1>
-      
+
       <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border p-6">
-        {/* Title */}
+
+        {/* ============ BASIC INFO ============ */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
           <input
@@ -206,7 +227,6 @@ const ExperienceForm = () => {
           />
         </div>
 
-        {/* Description */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
           <textarea
@@ -219,7 +239,6 @@ const ExperienceForm = () => {
           />
         </div>
 
-        {/* Price & Duration */}
         <div className="grid grid-cols-2 gap-4">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Base Price *</label>
@@ -251,7 +270,6 @@ const ExperienceForm = () => {
           </div>
         </div>
 
-        {/* Capacity & Meeting Point */}
         <div className="grid grid-cols-2 gap-4">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Max Capacity *</label>
@@ -278,7 +296,6 @@ const ExperienceForm = () => {
           </div>
         </div>
 
-        {/* Destination & Category */}
         <div className="grid grid-cols-2 gap-4">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Destination *</label>
@@ -312,6 +329,7 @@ const ExperienceForm = () => {
           </div>
         </div>
 
+        {/* ============ IMAGES ============ */}
         <div className="mb-6">
           <div className="flex items-end justify-between mb-2">
             <div>
@@ -364,6 +382,122 @@ const ExperienceForm = () => {
           <input id="imageInput" type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
         </div>
 
+        {/* ============ ✅ NEW: WHAT'S INCLUDED / EXCLUDED ============ */}
+        <section className="mb-6 border-t border-slate-200 pt-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-1">What's Included & What to Bring</h2>
+          <p className="mb-4 text-sm text-slate-500">Help travelers know exactly what to expect.</p>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">What's Included</label>
+            <textarea
+              name="whatIncluded"
+              value={formData.whatIncluded}
+              onChange={handleChange}
+              rows="2"
+              placeholder="e.g. Guide, snacks, entry tickets, transport"
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">What's NOT Included</label>
+            <textarea
+              name="whatNotIncluded"
+              value={formData.whatNotIncluded}
+              onChange={handleChange}
+              rows="2"
+              placeholder="e.g. Lunch, personal expenses, travel insurance"
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">What to Bring</label>
+            <textarea
+              name="whatToBring"
+              value={formData.whatToBring}
+              onChange={handleChange}
+              rows="2"
+              placeholder="e.g. Comfortable shoes, water bottle, sunscreen, hat"
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </section>
+
+        {/* ============ ✅ NEW: ADDITIONAL DETAILS ============ */}
+        <section className="mb-6 border-t border-slate-200 pt-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-1">Additional Details</h2>
+          <p className="mb-4 text-sm text-slate-500">Optional information to make your experience clearer.</p>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Languages</label>
+              <input
+                type="text"
+                name="languages"
+                value={formData.languages}
+                onChange={handleChange}
+                placeholder="e.g. English, Sinhala, Tamil"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fitness Level</label>
+              <select
+                name="fitnessLevel"
+                value={formData.fitnessLevel}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Not specified</option>
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Difficult">Difficult</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Age</label>
+              <input
+                type="number"
+                name="minAge"
+                value={formData.minAge}
+                onChange={handleChange}
+                min="0"
+                max="100"
+                placeholder="Leave empty for no minimum"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cancellation Policy</label>
+              <input
+                type="text"
+                name="cancellationPolicy"
+                value={formData.cancellationPolicy}
+                onChange={handleChange}
+                placeholder="e.g. Free cancellation up to 24h before"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Important Notes</label>
+            <textarea
+              name="importantNotes"
+              value={formData.importantNotes}
+              onChange={handleChange}
+              rows="2"
+              placeholder="e.g. Not suitable for pregnant women, wheelchair inaccessible"
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </section>
+
+        {/* ============ AVAILABILITY ============ */}
         <section className="mb-6 border-t border-slate-200 pt-6">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-slate-900">Manage Availability</h2>
@@ -398,10 +532,9 @@ const ExperienceForm = () => {
               <input type="time" name="endTime" value={formData.endTime} onChange={handleChange} className="mt-1 w-full rounded-lg border px-4 py-2 font-normal focus:outline-none focus:ring-2 focus:ring-indigo-500" required />
             </label>
           </div>
-
         </section>
 
-        {/* Submit & Cancel Buttons */}
+        {/* ============ SUBMIT ============ */}
         <div className="flex gap-4 mt-4">
           <button
             type="submit"

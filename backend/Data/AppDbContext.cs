@@ -15,16 +15,20 @@ namespace Backend.Data
         public DbSet<Destination> Destinations => Set<Destination>();
         public DbSet<Category> Categories => Set<Category>();
         public DbSet<Experience> Experiences => Set<Experience>();
+        public DbSet<Trip> Trips => Set<Trip>();
+        public DbSet<TripStop> TripStops => Set<TripStop>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            // ---------- USER ----------
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasIndex(u => u.Email).IsUnique();
             });
 
+            // ---------- LOCAL GUIDE ----------
             modelBuilder.Entity<LocalGuide>(entity =>
             {
                 entity.HasOne(g => g.User)
@@ -33,6 +37,7 @@ namespace Backend.Data
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // ---------- EXPERIENCE ----------
             modelBuilder.Entity<Experience>(entity =>
             {
                 entity.HasOne(e => e.Guide)
@@ -51,8 +56,45 @@ namespace Backend.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // ---------- TRIP ----------
+            modelBuilder.Entity<Trip>(entity =>
+            {
+                entity.HasOne(t => t.Traveler)
+                      .WithMany()
+                      .HasForeignKey(t => t.TravelerId)
+                      .OnDelete(DeleteBehavior.Cascade);
 
-            // Seed Admin & Default categories
+                entity.HasOne(t => t.TravelAgent)
+                      .WithMany()
+                      .HasForeignKey(t => t.TravelAgentId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(t => t.Destination)
+                      .WithMany()
+                      .HasForeignKey(t => t.DestinationId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // ✅ NEW: ONE Local Guide per trip
+                entity.HasOne(t => t.Guide)
+                      .WithMany()
+                      .HasForeignKey(t => t.GuideId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ---------- TRIP STOP ----------
+            modelBuilder.Entity<TripStop>(entity =>
+            {
+                entity.HasOne(s => s.Trip)
+                      .WithMany(t => t.TripStops)
+                      .HasForeignKey(s => s.TripId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(s => s.Experience)
+                      .WithMany()
+                      .HasForeignKey(s => s.ExperienceId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
             SeedInitialData(modelBuilder);
         }
 

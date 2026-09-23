@@ -32,6 +32,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // 3. Register Application Services
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPlannerAgentService, PlannerAgentService>();
 builder.Services.AddHttpClient<IWeatherService, WeatherService>();
 builder.Services.AddScoped<ImageUploadService>();
 
