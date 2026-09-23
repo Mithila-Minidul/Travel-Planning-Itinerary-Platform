@@ -173,9 +173,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         ),
         const SizedBox(height: 16),
 
-        // ================= ✅ NEW: ASSIGNED LOCAL GUIDE =================
+        // ================= ASSIGNED LOCAL GUIDE =================
         if ((trip['guideName'] ?? '').toString().isNotEmpty)
           _buildGuideCard(trip),
+
+        // ================= ✅ NEW: TRIP PREFERENCES =================
+        _buildPreferencesCard(trip),
 
         // ================= AI PROGRESS WIDGET =================
         AiProgressWidget(status: (trip['status'] ?? 'Pending').toString()),
@@ -231,7 +234,99 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     );
   }
 
-  // ✅ NEW: Assigned Local Guide Card
+  // ✅ NEW: Trip Preferences Card
+  Widget _buildPreferencesCard(dynamic trip) {
+    final travelGroup = (trip['travelGroup'] ?? '').toString();
+    final numberOfTravelers = trip['numberOfTravelers'] ?? 1;
+    final budgetTier = (trip['budgetTier'] ?? '').toString();
+    final travelPace = (trip['travelPace'] ?? '').toString();
+    final preferredTimes = (trip['preferredTimes'] ?? '').toString();
+    final specialRequests = (trip['specialRequests'] ?? '').toString();
+
+    final hasAny = travelGroup.isNotEmpty ||
+        budgetTier.isNotEmpty ||
+        travelPace.isNotEmpty ||
+        preferredTimes.isNotEmpty ||
+        specialRequests.isNotEmpty;
+
+    if (!hasAny) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'TRIP PREFERENCES',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              if (travelGroup.isNotEmpty)
+                _prefTile('Group', '$travelGroup ($numberOfTravelers)'),
+              if (budgetTier.isNotEmpty)
+                _prefTile('Budget Style', budgetTier),
+              if (travelPace.isNotEmpty)
+                _prefTile('Pace', travelPace),
+              if (preferredTimes.isNotEmpty)
+                _prefTile('Times', preferredTimes.split(',').join(', ')),
+            ],
+          ),
+          if (specialRequests.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Divider(color: Colors.grey.shade300, height: 1),
+            const SizedBox(height: 10),
+            const Text(
+              'Special Requests',
+              style: TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              specialRequests,
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _prefTile(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Colors.grey),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Assigned Local Guide Card
   Widget _buildGuideCard(dynamic trip) {
     final guideName = (trip['guideName'] ?? '').toString();
     final guideCity = (trip['guideCity'] ?? '').toString();

@@ -20,11 +20,29 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
   final _titleController = TextEditingController();
   final _objectiveController = TextEditingController();
   final _budgetController = TextEditingController();
+  final _specialRequestsController = TextEditingController();
 
   DateTime _startDate = DateTime.now().add(const Duration(days: 1));
   DateTime _endDate = DateTime.now().add(const Duration(days: 4));
 
-  // Interest -> selected
+  // Travel group
+  String _travelGroup = 'Solo';
+  int _numberOfTravelers = 1;
+
+  // Budget tier
+  String _budgetTier = 'Mid';
+
+  // Pace
+  String _travelPace = 'Balanced';
+
+  // Preferred times (multi-select)
+  final Map<String, bool> _preferredTimes = {
+    'Morning': true,
+    'Afternoon': true,
+    'Evening': false,
+  };
+
+  // Interests
   final Map<String, bool> _interests = {
     'Hiking': false,
     'Nature': false,
@@ -43,6 +61,7 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
     _titleController.dispose();
     _objectiveController.dispose();
     _budgetController.dispose();
+    _specialRequestsController.dispose();
     super.dispose();
   }
 
@@ -70,7 +89,6 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Validate dates
     if (_endDate.isBefore(_startDate)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('End date must be after start date')),
@@ -90,6 +108,11 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
       return;
     }
 
+    final selectedTimes = _preferredTimes.entries
+        .where((e) => e.value)
+        .map((e) => e.key)
+        .join(',');
+
     setState(() => _loading = true);
 
     try {
@@ -101,11 +124,17 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
         endDate: _endDate,
         budget: double.parse(_budgetController.text.trim()),
         interests: selectedInterests,
+        // ✅ NEW fields
+        travelGroup: _travelGroup,
+        numberOfTravelers: _numberOfTravelers,
+        budgetTier: _budgetTier,
+        travelPace: _travelPace,
+        preferredTimes: selectedTimes,
+        specialRequests: _specialRequestsController.text.trim(),
       );
 
       if (!mounted) return;
 
-      // Success dialog
       await showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -194,7 +223,12 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
               ),
               const SizedBox(height: 20),
 
-              // ============ TITLE ============
+              // ============================================
+              // SECTION 1: TRIP BASICS
+              // ============================================
+              _sectionHeader('1. Trip Basics'),
+              const SizedBox(height: 10),
+
               const Text('Trip Title *',
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
@@ -204,10 +238,9 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Title is required' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-              // ============ OBJECTIVE ============
-              const Text('Objective',
+              const Text('Objective (optional)',
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextFormField(
@@ -215,9 +248,89 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
                 maxLines: 2,
                 decoration: _inputDecoration('e.g. Relaxing mountain weekend'),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // ============ DATES ============
+              // ============================================
+              // SECTION 2: TRAVEL GROUP
+              // ============================================
+              _sectionHeader('2. Travel Group'),
+              const SizedBox(height: 10),
+
+              const Text('Who is going?',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: ['Solo', 'Couple', 'Family', 'Friends'].map((group) {
+                  final selected = _travelGroup == group;
+                  return ChoiceChip(
+                    label: Text(group),
+                    selected: selected,
+                    onSelected: (val) {
+                      if (val) {
+                        setState(() {
+                          _travelGroup = group;
+                          if (group == 'Solo') _numberOfTravelers = 1;
+                          if (group == 'Couple') _numberOfTravelers = 2;
+                          if (group == 'Family') _numberOfTravelers = 4;
+                          if (group == 'Friends') _numberOfTravelers = 4;
+                        });
+                      }
+                    },
+                    selectedColor: const Color(0xFF4F46E5).withOpacity(0.2),
+                    labelStyle: TextStyle(
+                      color:
+                          selected ? const Color(0xFF4F46E5) : Colors.grey[700],
+                      fontWeight:
+                          selected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 14),
+
+              const Text('Number of Travelers',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: _numberOfTravelers > 1
+                        ? () => setState(() => _numberOfTravelers--)
+                        : null,
+                    icon: const Icon(Icons.remove_circle_outline),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$_numberOfTravelers',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _numberOfTravelers < 50
+                        ? () => setState(() => _numberOfTravelers++)
+                        : null,
+                    icon: const Icon(Icons.add_circle_outline),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // ============================================
+              // SECTION 3: DATES
+              // ============================================
+              _sectionHeader('3. Dates'),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
@@ -237,15 +350,21 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // ============ BUDGET ============
-              const Text('Budget (USD) *',
+              // ============================================
+              // SECTION 4: BUDGET
+              // ============================================
+              _sectionHeader('4. Budget'),
+              const SizedBox(height: 10),
+
+              const Text('Total Budget (USD) *',
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _budgetController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: _inputDecoration('e.g. 450'),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Budget is required';
@@ -254,12 +373,43 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
 
-              // ============ INTERESTS ============
-              const Text('Interests *',
+              const Text('Budget Style',
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  {'icon': '💰', 'label': 'Budget'},
+                  {'icon': '💵', 'label': 'Mid'},
+                  {'icon': '💎', 'label': 'Luxury'},
+                ].map((tier) {
+                  final selected = _budgetTier == tier['label'];
+                  return ChoiceChip(
+                    label: Text('${tier['icon']} ${tier['label']}'),
+                    selected: selected,
+                    onSelected: (val) {
+                      if (val) setState(() => _budgetTier = tier['label']!);
+                    },
+                    selectedColor: const Color(0xFF4F46E5).withOpacity(0.2),
+                    labelStyle: TextStyle(
+                      color:
+                          selected ? const Color(0xFF4F46E5) : Colors.grey[700],
+                      fontWeight:
+                          selected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+
+              // ============================================
+              // SECTION 5: INTERESTS
+              // ============================================
+              _sectionHeader('5. Interests *'),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -275,9 +425,92 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
                   );
                 }).toList(),
               ),
+              const SizedBox(height: 20),
+
+              // ============================================
+              // SECTION 6: TRAVEL PACE
+              // ============================================
+              _sectionHeader('6. Travel Pace'),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  {'icon': '😌', 'label': 'Relaxed'},
+                  {'icon': '🙂', 'label': 'Balanced'},
+                  {'icon': '🏃', 'label': 'Fast'},
+                ].map((pace) {
+                  final selected = _travelPace == pace['label'];
+                  return ChoiceChip(
+                    label: Text('${pace['icon']} ${pace['label']}'),
+                    selected: selected,
+                    onSelected: (val) {
+                      if (val) setState(() => _travelPace = pace['label']!);
+                    },
+                    selectedColor: const Color(0xFF4F46E5).withOpacity(0.2),
+                    labelStyle: TextStyle(
+                      color:
+                          selected ? const Color(0xFF4F46E5) : Colors.grey[700],
+                      fontWeight:
+                          selected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _travelPace == 'Relaxed'
+                    ? '1-2 activities per day'
+                    : _travelPace == 'Balanced'
+                        ? '2-3 activities per day'
+                        : '3-4 activities per day',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ============================================
+              // SECTION 7: PREFERRED TIMES
+              // ============================================
+              _sectionHeader('7. Preferred Times'),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _preferredTimes.keys.map((key) {
+                  final selected = _preferredTimes[key] ?? false;
+                  return FilterChip(
+                    label: Text(key),
+                    selected: selected,
+                    onSelected: (val) =>
+                        setState(() => _preferredTimes[key] = val),
+                    selectedColor: const Color(0xFF4F46E5).withOpacity(0.2),
+                    checkmarkColor: const Color(0xFF4F46E5),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+
+              // ============================================
+              // SECTION 8: SPECIAL REQUESTS
+              // ============================================
+              _sectionHeader('8. Special Requests (optional)'),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _specialRequestsController,
+                maxLines: 3,
+                decoration: _inputDecoration(
+                  'e.g. Vegetarian meals, wheelchair access, no early mornings...',
+                ),
+              ),
               const SizedBox(height: 28),
 
-              // ============ SUBMIT ============
+              // ============================================
+              // SUBMIT
+              // ============================================
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -301,7 +534,10 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
                         )
                       : const Text(
                           '🚀 Generate AI Itinerary',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                 ),
               ),
@@ -311,8 +547,23 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
+              const SizedBox(height: 24),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF4F46E5),
         ),
       ),
     );
