@@ -1,13 +1,23 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
 from config.settings import settings
-from models.schemas import ResearchAgentRequest, ResearchAgentResponse
+from models.schemas import (
+    ResearchAgentRequest,
+    ResearchAgentResponse,
+    PlannerRequest,
+    PlannerResponse,
+    BudgetRequest,
+    BudgetResponse,
+)
 from agents.research_agent import ResearchAgent
+from agents.planner_agent import PlannerAgent
+from agents.budget_agent import BudgetAgent
 
 app = FastAPI(
     title="Travel App - Agentic AI Subsystem",
-    description="Microservice running Member 1 Research Agent",
-    version="1.0.0"
+    description="Microservice running the TripCraft agents",
+    version="1.3.0",
 )
 
 app.add_middleware(
@@ -19,19 +29,56 @@ app.add_middleware(
 )
 
 research_agent = ResearchAgent()
+planner_agent = PlannerAgent()
+budget_agent = BudgetAgent()
 
+
+# ================= HEALTH =================
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "agent": "Research Agent ready"}
+    return {
+        "status": "healthy",
+        "agents": [
+            "Planner Agent",
+            "Research Agent",
+            "Budget Agent",
+        ],
+        "version": "1.3.0",
+    }
 
+
+# ================= RESEARCH AGENT (Member 1) =================
 @app.post("/api/agents/research", response_model=ResearchAgentResponse)
 async def run_research_agent(request: ResearchAgentRequest):
     try:
-        response = await research_agent.execute(request)
-        return response
+        return await research_agent.execute(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
 
+
+# ================= PLANNER AGENT (Member 2) =================
+@app.post("/api/agents/planner", response_model=PlannerResponse)
+async def run_planner_agent(request: PlannerRequest):
+    try:
+        return await planner_agent.execute(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
+
+
+# ================= BUDGET AGENT (Member 4) =================
+@app.post("/api/agents/budget", response_model=BudgetResponse)
+async def run_budget_agent(request: BudgetRequest):
+    try:
+        return await budget_agent.execute(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Agent Error: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=settings.SERVICE_PORT, reload=True)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=settings.SERVICE_PORT,
+        reload=True,
+    )
