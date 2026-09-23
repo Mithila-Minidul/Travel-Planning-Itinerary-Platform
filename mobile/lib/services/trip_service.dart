@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../utils/constants.dart';
-import 'secure_storage.dart';    // ✅ Use your existing SecureStorage
+import 'secure_storage.dart';
 
 class TripService {
   static String get baseUrl => ApiConstants.baseUrl;
 
-  // ✅ Use SecureStorage.getToken() - matches how login saves it
   static Future<String?> _getToken() async {
     return await SecureStorage.getToken();
   }
@@ -53,12 +52,15 @@ class TripService {
     required double budget,
     required String interests,
     String constraints = '',
+    // ✅ NEW fields
+    String? travelGroup,
+    int numberOfTravelers = 1,
+    String? budgetTier,
+    String? travelPace,
+    String? preferredTimes,
+    String? specialRequests,
   }) async {
     final token = await _getToken();
-
-    // 🔍 Debug (remove later)
-    print('🔑 Token: ${token != null ? "found (${token.length} chars)" : "NULL"}');
-    print('🌐 URL: $baseUrl/Trips');
 
     final response = await http.post(
       Uri.parse('$baseUrl/Trips'),
@@ -75,11 +77,15 @@ class TripService {
         'budget': budget,
         'interests': interests,
         'constraints': constraints,
+        // ✅ NEW fields
+        'travelGroup': travelGroup,
+        'numberOfTravelers': numberOfTravelers,
+        'budgetTier': budgetTier,
+        'travelPace': travelPace,
+        'preferredTimes': preferredTimes,
+        'specialRequests': specialRequests,
       }),
     );
-
-    print('📥 Status: ${response.statusCode}');
-    print('📥 Body: ${response.body}');
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
