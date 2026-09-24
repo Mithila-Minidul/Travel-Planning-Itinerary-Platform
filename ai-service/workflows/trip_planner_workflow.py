@@ -257,26 +257,60 @@ class TripPlannerWorkflow:
         # ================= BUILD STOPS =================
         stops: List[TripStop] = []
         prices: List[float] = []
-        order = 0
+        order = 0            # cursor into guide_experiences
+        stop_index = 0       # unique OrderIndex per TripStop row
+        free_day_count = 0   # days with no experience (Fix #5)
 
         for day in plan.days:
             day_recs = guide_experiences[
                 order : order + self.MAX_ACTIVITIES_PER_DAY
             ]
-            for rec in day_recs:
+
+            if day_recs:
+                # Real experiences available for this day
+                for rec in day_recs:
+                    stops.append(
+                        TripStop(
+                            experience_id=rec.experience_id,
+                            day_number=day.day_number,
+                            title=rec.title,
+                            description=rec.recommendation_reason,
+                            location=request.destination_name,
+                            estimated_cost=rec.calculated_price,
+                            order_index=stop_index,
+                        )
+                    )
+                    prices.append(rec.calculated_price)
+                    order += 1
+                    stop_index += 1
+            else:
+                # No experiences left — insert a Free Day placeholder (Fix #2)
                 stops.append(
                     TripStop(
-                        experience_id=rec.experience_id,
+                        experience_id=None,
                         day_number=day.day_number,
-                        title=rec.title,
-                        description=rec.recommendation_reason,
+                        title=f"Day {day.day_number}: Free Day",
+                        description="Explore at your own pace or relax.",
                         location=request.destination_name,
-                        estimated_cost=rec.calculated_price,
-                        order_index=order,
+                        estimated_cost=0.0,
+                        order_index=stop_index,
                     )
                 )
-                prices.append(rec.calculated_price)
-                order += 1
+                stop_index += 1
+                free_day_count += 1
+
+                        # ================= LOG FREE DAYS (Fix #5) =================
+        if free_day_count > 0:
+            self._log(
+                execution_log,
+                "Orchestrator",
+                f"Inserted {free_day_count} Free Day placeholder(s)",
+                status="WARNING" if free_day_count > len(guide_experiences) else "SUCCESS",
+                details=(
+                    f"Only {len(guide_experiences)} experience(s) available for "
+                    f"{len(plan.days)} day(s) — remaining days marked as Free Days."
+                ),
+            )
 
         # ================= 3. BUDGET =================
         try:

@@ -17,6 +17,8 @@ namespace Backend.Data
         public DbSet<Experience> Experiences => Set<Experience>();
         public DbSet<Trip> Trips => Set<Trip>();
         public DbSet<TripStop> TripStops => Set<TripStop>();
+        public DbSet<AgentWorkflow> AgentWorkflows => Set<AgentWorkflow>();
+        public DbSet<AgentExecutionLog> AgentExecutionLogs => Set<AgentExecutionLog>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -74,7 +76,6 @@ namespace Backend.Data
                       .HasForeignKey(t => t.DestinationId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // ✅ NEW: ONE Local Guide per trip
                 entity.HasOne(t => t.Guide)
                       .WithMany()
                       .HasForeignKey(t => t.GuideId)
@@ -93,6 +94,28 @@ namespace Backend.Data
                       .WithMany()
                       .HasForeignKey(s => s.ExperienceId)
                       .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ---------- AGENT WORKFLOW ----------
+            modelBuilder.Entity<AgentWorkflow>(entity =>
+            {
+                entity.HasOne(w => w.Trip)
+                      .WithMany()
+                      .HasForeignKey(w => w.TripId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(w => w.TripId);
+            });
+
+            // ---------- AGENT EXECUTION LOG ----------
+            modelBuilder.Entity<AgentExecutionLog>(entity =>
+            {
+                entity.HasOne(l => l.AgentWorkflow)
+                      .WithMany(w => w.ExecutionLogs)
+                      .HasForeignKey(l => l.AgentWorkflowId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(l => l.AgentWorkflowId);
             });
 
             SeedInitialData(modelBuilder);
