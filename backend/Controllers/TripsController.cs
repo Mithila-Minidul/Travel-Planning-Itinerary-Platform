@@ -164,12 +164,25 @@ namespace Backend.Controllers
         // POST: api/Trips
         // ONLY Traveler — calls the Python AI service
         // ============================================================
+        private const int MAX_TRIP_DAYS = 14;
+
         [Authorize(Roles = "Traveler")]
         [HttpPost]
         public async Task<IActionResult> CreateTrip([FromBody] TripCreateDto request)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
+
+            // ✅ Server-side validation: cap trip length (matches Flutter + AI limit)
+            var totalDays = (request.EndDate.Date - request.StartDate.Date).Days + 1;
+            if (totalDays < 1)
+                return BadRequest(new { message = "End date must be on or after start date." });
+            if (totalDays > MAX_TRIP_DAYS)
+                return BadRequest(new
+                {
+                    message = $"Trips are limited to {MAX_TRIP_DAYS} days. " +
+                              $"Requested: {totalDays} days."
+                });
 
             var destination = await _context.Destinations
                 .FirstOrDefaultAsync(d => d.Id == request.DestinationId);
