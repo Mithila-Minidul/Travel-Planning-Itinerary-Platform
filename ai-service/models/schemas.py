@@ -28,6 +28,7 @@ class DestinationWeather(BaseModel):
 class RecommendedExperience(BaseModel):
     experience_id: str
     title: str
+    guide_id: Optional[str] = None          # ✅ NEW — used by Orchestrator (One Guide rule)
     guide_name: str
     category: str
     calculated_price: float
