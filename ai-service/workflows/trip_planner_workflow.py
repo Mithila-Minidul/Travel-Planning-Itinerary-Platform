@@ -7,12 +7,19 @@ Flow:
     Planner → Research → Budget → Approval
     Each agent writes to a shared execution log.
 
-The workflow returns a complete ItineraryResponse that the C# backend
-saves to the database. If any agent fails, the workflow halts
-safely and returns an error response with the execution log so far.
+Business rule enforced by the orchestrator:
+    ONE GUIDE PER TRIP
+    - Research returns all matching experiences.
+    - Orchestrator groups them by guide_id, scores each guide,
+      and picks the winner.
+    - Only the winner's experiences are used in the itinerary.
+    - The winning guide's id and name are returned to C#.
+
+If any agent fails, the workflow halts safely and returns an error
+response with the execution log so far.
 """
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Dict, Optional
 
 from agents import (
     PlannerAgent,
@@ -27,6 +34,7 @@ from models.schemas import (
     ExecutionLogEntry,
     PlannerRequest,
     ResearchAgentRequest,
+    RecommendedExperience,
     BudgetRequest,
     ApprovalRequest,
 )
@@ -42,6 +50,9 @@ class TripPlannerWorkflow:
         self.budget = BudgetAgent()
         self.approval = ApprovalAgent()
 
+    # ============================================================
+    # Helpers
+    # ============================================================
     def _now(self) -> str:
         return datetime.now(timezone.utc).isoformat()
 
@@ -79,6 +90,61 @@ class TripPlannerWorkflow:
             errors=errors,
         )
 
+    # ============================================================
+    # ONE GUIDE PER TRIP
+    # ============================================================
+    def _pick_winning_guide(
+        self,
+        experiences: List[RecommendedExperience],
+        interests: List[str],
+    ) -> Optional[str]:
+        """
+        Group experiences by guide_id and pick the winning guide.
+
+        Scoring (higher is better):
+            1. Number of experiences matching the traveler's interests
+            2. Total experiences from that guide (tie-breaker)
+
+        Returns the winning guide_id, or None if no experiences.
+        """
+        if not experiences:
+            return None
+
+        normalized = {i.strip().lower() for i in (interests or []) if i.strip()}
+
+        # ---- Group by guide_id ----
+        groups: Dict[str, List[RecommendedExperience]] = {}
+        for exp in experiences:
+            gid = (exp.guide_id or "").strip()
+            if not gid:
+                continue  # skip experiences without a guide_id
+            groups.setdefault(gid, []).append(exp)
+
+        # ---- Fallback: group by guide_name if guide_id missing ----
+        if not groups:
+            by_name: Dict[str, List[RecommendedExperience]] = {}
+            for exp in experiences:
+                key = (exp.guide_name or "").strip() or "unknown"
+                by_name.setdefault(key, []).append(exp)
+            winner_name = max(by_name.items(), key=lambda kv: len(kv[1]))[0]
+            return by_name[winner_name][0].guide_id or winner_name
+
+        # ---- Score each guide ----
+        def score(item):
+            gid, exps = item
+            matching = sum(
+                1
+                for e in exps
+                if (e.category or "").strip().lower() in normalized
+            )
+            return (matching, len(exps))
+
+        winner_id, _winner_exps = max(groups.items(), key=score)
+        return winner_id
+
+    # ============================================================
+    # Main workflow
+    # ============================================================
     async def run(self, request: ItineraryRequest) -> ItineraryResponse:
         execution_log: List[ExecutionLogEntry] = []
         errors: List[str] = []
@@ -110,7 +176,7 @@ class TripPlannerWorkflow:
             research = await self.researcher.execute(
                 ResearchAgentRequest(
                     destination_name=request.destination_name,
-                    category_name=None,  # get all matches, distribute later
+                    category_name=None,  # get all; orchestrator filters later
                     max_budget=request.budget,
                     travel_date=request.start_date,
                 )
@@ -125,18 +191,78 @@ class TripPlannerWorkflow:
             errors.append(f"Research failed: {e}")
             return self._error_response(request, execution_log, errors)
 
+        # ================= ONE GUIDE PER TRIP =================
+        all_experiences = research.recommended_experiences or []
+
+        winner_guide_id = self._pick_winning_guide(
+            all_experiences, request.interests
+        )
+
+        if winner_guide_id is None:
+            self._log(
+                execution_log,
+                "Orchestrator",
+                "No experiences available — empty itinerary",
+                status="WARNING",
+            )
+            return ItineraryResponse(
+                trip_id=request.trip_id,
+                stops=[],
+                winning_guide_id=None,
+                winning_guide_name=None,
+                winning_guide_city=None,
+                budget_valid=False,
+                total_estimated_cost=0.0,
+                approval_status="PENDING",
+                execution_log=execution_log,
+                errors=[],
+            )
+
+        # Keep ONLY the winner's experiences
+        guide_experiences = [
+            e
+            for e in all_experiences
+            if (e.guide_id or "").strip() == winner_guide_id
+        ]
+
+        # Fallback: match by guide_name if guide_id failed
+        if not guide_experiences:
+            first = next(
+                (
+                    e
+                    for e in all_experiences
+                    if (e.guide_id or "") == winner_guide_id
+                ),
+                None,
+            )
+            if first:
+                guide_experiences = [
+                    e
+                    for e in all_experiences
+                    if e.guide_name == first.guide_name
+                ]
+
+        winning_guide_name = (
+            guide_experiences[0].guide_name if guide_experiences else None
+        )
+
+        self._log(
+            execution_log,
+            "Orchestrator",
+            f"Selected guide: {winning_guide_name} "
+            f"({len(guide_experiences)} experiences)",
+            details="ONE GUIDE PER TRIP rule applied",
+        )
+
         # ================= BUILD STOPS =================
         stops: List[TripStop] = []
         prices: List[float] = []
-        winning_guide_name = None
         order = 0
 
-        experiences = research.recommended_experiences or []
-        if experiences:
-            winning_guide_name = experiences[0].guide_name
-
         for day in plan.days:
-            day_recs = experiences[order : order + self.MAX_ACTIVITIES_PER_DAY]
+            day_recs = guide_experiences[
+                order : order + self.MAX_ACTIVITIES_PER_DAY
+            ]
             for rec in day_recs:
                 stops.append(
                     TripStop(
@@ -201,9 +327,9 @@ class TripPlannerWorkflow:
         return ItineraryResponse(
             trip_id=request.trip_id,
             stops=stops,
-            winning_guide_id=None,
+            winning_guide_id=winner_guide_id,
             winning_guide_name=winning_guide_name,
-            winning_guide_city=None,
+            winning_guide_city=None,   # C# resolves city via LocalGuides
             budget_valid=budget_result.valid,
             total_estimated_cost=budget_result.total_cost,
             approval_status=approval_result.status,

@@ -42,6 +42,7 @@ class ResearchAgent:
             cat_name = exp.get("categoryName", "")
             title = exp.get("title", "")
             guide = exp.get("guideName", "Local Guide")
+            guide_id = exp.get("guideId", "") or exp.get("guide_id", "")   # ✅ NEW
             price = float(exp.get("currentCalculatedPrice", 0))
             duration = int(exp.get("durationHours", 0))
 
@@ -56,6 +57,7 @@ class ResearchAgent:
                 RecommendedExperience(
                     experience_id=exp.get("id", ""),
                     title=title,
+                    guide_id=guide_id,          # ✅ NEW
                     guide_name=guide,
                     category=cat_name,
                     calculated_price=price,
