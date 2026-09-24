@@ -42,7 +42,7 @@ namespace Backend.Controllers
                 .Include(t => t.Traveler)
                 .Include(t => t.TravelAgent)
                 .Include(t => t.Destination)
-                .Include(t => t.Guide).ThenInclude(g => g.User)   // ✅ NEW
+                .Include(t => t.Guide).ThenInclude(g => g.User)
                 .AsQueryable();
 
             if (userRole == "Traveler")
@@ -66,10 +66,15 @@ namespace Backend.Controllers
                     Status = t.Status,
                     TravelerName = t.Traveler.FullName,
                     TravelAgentName = t.TravelAgent != null ? t.TravelAgent.FullName : null,
-                    // ✅ NEW
                     GuideId = t.GuideId,
                     GuideName = t.Guide != null && t.Guide.User != null ? t.Guide.User.FullName : null,
                     GuideCity = t.Guide != null ? t.Guide.City : null,
+                    TravelGroup = t.TravelGroup,
+                    NumberOfTravelers = t.NumberOfTravelers,
+                    BudgetTier = t.BudgetTier,
+                    TravelPace = t.TravelPace,
+                    PreferredTimes = t.PreferredTimes,
+                    SpecialRequests = t.SpecialRequests,
                     TotalEstimatedCost = t.TripStops.Sum(s => s.EstimatedCost),
                     CreatedAt = t.CreatedAt,
                     UpdatedAt = t.UpdatedAt,
@@ -104,7 +109,7 @@ namespace Backend.Controllers
                 .Include(t => t.Traveler)
                 .Include(t => t.TravelAgent)
                 .Include(t => t.Destination)
-                .Include(t => t.Guide).ThenInclude(g => g.User)   // ✅ NEW
+                .Include(t => t.Guide).ThenInclude(g => g.User)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (trip == null) return NotFound(new { message = "Trip not found." });
@@ -126,10 +131,15 @@ namespace Backend.Controllers
                 Status = trip.Status,
                 TravelerName = trip.Traveler.FullName,
                 TravelAgentName = trip.TravelAgent?.FullName,
-                // ✅ NEW
                 GuideId = trip.GuideId,
                 GuideName = trip.Guide?.User?.FullName,
                 GuideCity = trip.Guide?.City,
+                TravelGroup = trip.TravelGroup,
+                NumberOfTravelers = trip.NumberOfTravelers,
+                BudgetTier = trip.BudgetTier,
+                TravelPace = trip.TravelPace,
+                PreferredTimes = trip.PreferredTimes,
+                SpecialRequests = trip.SpecialRequests,
                 TotalEstimatedCost = trip.TripStops.Sum(s => s.EstimatedCost),
                 CreatedAt = trip.CreatedAt,
                 UpdatedAt = trip.UpdatedAt,
@@ -152,7 +162,10 @@ namespace Backend.Controllers
 
         // ============================================================
         // POST: api/Trips
+        // ONLY Traveler — calls the Python AI service
         // ============================================================
+        private const int MAX_TRIP_DAYS = 14;
+
         [Authorize(Roles = "Traveler")]
         [HttpPost]
         public async Task<IActionResult> CreateTrip([FromBody] TripCreateDto request)
@@ -160,21 +173,44 @@ namespace Backend.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
 
-            var destinationExists = await _context.Destinations.AnyAsync(d => d.Id == request.DestinationId);
-            if (!destinationExists)
+            // ✅ Server-side validation: cap trip length (matches Flutter + AI limit)
+            var totalDays = (request.EndDate.Date - request.StartDate.Date).Days + 1;
+            if (totalDays < 1)
+                return BadRequest(new { message = "End date must be on or after start date." });
+            if (totalDays > MAX_TRIP_DAYS)
+                return BadRequest(new
+                {
+                    message = $"Trips are limited to {MAX_TRIP_DAYS} days. " +
+                              $"Requested: {totalDays} days."
+                });
+
+            var destination = await _context.Destinations
+                .FirstOrDefaultAsync(d => d.Id == request.DestinationId);
+            if (destination == null)
                 return BadRequest(new { message = "Destination not found." });
 
-            // 1. Run Planner Agent → returns stops + ONE winning guide
-            var plannerResult = await _plannerAgent.GenerateItineraryAsync(
-                request.DestinationId,
-                request.StartDate,
-                request.EndDate,
-                request.Budget,
-                request.Interests ?? string.Empty);
+            var tripId = Guid.NewGuid();
 
-            // 2. Create Trip with the winning guide
+            // Call Python AI service (Planner → Research → Budget → Approval)
+            var plannerResult = await _plannerAgent.GenerateItineraryAsync(
+                tripId: tripId,
+                destinationId: request.DestinationId,
+                destinationName: destination.Name,
+                startDate: request.StartDate,
+                endDate: request.EndDate,
+                budget: request.Budget,
+                interests: request.Interests ?? string.Empty,
+                travelGroup: request.TravelGroup ?? "Solo",
+                numberOfTravelers: request.NumberOfTravelers <= 0 ? 1 : request.NumberOfTravelers,
+                budgetTier: request.BudgetTier ?? "Mid",
+                travelPace: request.TravelPace ?? "Balanced",
+                preferredTimes: request.PreferredTimes ?? string.Empty,
+                specialRequests: request.SpecialRequests ?? string.Empty);
+
+            // ---- Build Trip ----
             var trip = new Trip
             {
+                Id = tripId,
                 Title = request.Title,
                 Objective = request.Objective ?? string.Empty,
                 Interests = request.Interests ?? string.Empty,
@@ -185,21 +221,98 @@ namespace Backend.Controllers
                 Constraints = request.Constraints ?? string.Empty,
                 Status = "Pending",
                 TravelerId = Guid.Parse(userIdClaim),
-                GuideId = plannerResult.WinningGuideId,   // ✅ NEW
-                TripStops = plannerResult.Stops
+                GuideId = plannerResult.WinningGuideId,
+                TripStops = plannerResult.Stops,
+                TravelGroup = request.TravelGroup,
+                NumberOfTravelers = request.NumberOfTravelers <= 0 ? 1 : request.NumberOfTravelers,
+                BudgetTier = request.BudgetTier,
+                TravelPace = request.TravelPace,
+                PreferredTimes = request.PreferredTimes,
+                SpecialRequests = request.SpecialRequests
             };
 
+            // ---- Build AgentWorkflow + AgentExecutionLogs ----
+            var workflow = BuildAgentWorkflow(tripId, request.Objective, plannerResult);
+
             _context.Trips.Add(trip);
+            _context.AgentWorkflows.Add(workflow);
+
+            // One atomic save: Trip + TripStops + AgentWorkflow + AgentExecutionLogs
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Trip created and itinerary generated.",
+                message = "Trip created and itinerary generated by AI service.",
                 tripId = trip.Id,
+                workflowId = workflow.Id,
                 stopsGenerated = plannerResult.Stops.Count,
                 guideId = plannerResult.WinningGuideId,
-                guideName = plannerResult.WinningGuideName
+                guideName = plannerResult.WinningGuideName,
+                budgetValid = plannerResult.BudgetValid,
+                totalEstimatedCost = plannerResult.TotalEstimatedCost,
+                approvalStatus = plannerResult.ApprovalStatus,
+                executionLogEntries = plannerResult.ExecutionLog.Count,
+                errors = plannerResult.Errors
             });
+        }
+
+        // ============================================================
+        // Helper: build AgentWorkflow from PlannerResult.ExecutionLog
+        // ============================================================
+        private static AgentWorkflow BuildAgentWorkflow(
+            Guid tripId,
+            string? objective,
+            PlannerResult plannerResult)
+        {
+            var workflow = new AgentWorkflow
+            {
+                TripId = tripId,
+                Status = plannerResult.ApprovalStatus,
+                Objective = objective ?? string.Empty,
+                StartedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow,
+                TotalSteps = plannerResult.ExecutionLog.Count,
+                TotalEstimatedCost = plannerResult.TotalEstimatedCost,
+                BudgetValid = plannerResult.BudgetValid,
+                WinningGuideName = plannerResult.WinningGuideName
+            };
+
+            DateTime? previous = null;
+            int seq = 1;
+            foreach (var entry in plannerResult.ExecutionLog)
+            {
+                // ✅ FIX: Python sends ISO-8601 with +00:00 offset.
+                // Use AdjustToUniversal + AssumeUniversal so the resulting
+                // DateTime has Kind=Utc — required by Npgsql for timestamptz.
+                DateTime current = DateTime.TryParse(
+                    entry.Timestamp,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.AdjustToUniversal
+                        | System.Globalization.DateTimeStyles.AssumeUniversal,
+                    out var parsed)
+                    ? parsed
+                    : DateTime.UtcNow;
+
+                long elapsed = previous.HasValue
+                    ? (long)(current - previous.Value).TotalMilliseconds
+                    : 0;
+
+                workflow.ExecutionLogs.Add(new AgentExecutionLog
+                {
+                    AgentWorkflowId = workflow.Id,
+                    SequenceNumber = seq++,
+                    AgentName = entry.Agent,
+                    Action = entry.Action,
+                    Status = entry.Status,
+                    Details = entry.Details,
+                    ExecutedAt = current,
+                    ElapsedMs = elapsed
+                });
+
+                previous = current;
+            }
+
+            return workflow;
         }
 
         // ============================================================

@@ -1,272 +1,222 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Backend.Data;
 using Backend.Models;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Backend.Services
 {
     /// <summary>
-    /// Result of the Planner Agent — contains stops AND the chosen guide.
+    /// Full result of the Python 4-agent workflow.
     /// </summary>
     public class PlannerResult
     {
         public List<TripStop> Stops { get; set; } = new();
         public Guid? WinningGuideId { get; set; }
         public string? WinningGuideName { get; set; }
+        public bool BudgetValid { get; set; }
+        public decimal TotalEstimatedCost { get; set; }
+        public string ApprovalStatus { get; set; } = "PENDING";
+        public List<ExecutionLogEntry> ExecutionLog { get; set; } = new();
+        public List<string> Errors { get; set; } = new();
+    }
+
+    /// <summary>
+    /// One audit-log row from the Python workflow.
+    /// </summary>
+    public class ExecutionLogEntry
+    {
+        [JsonPropertyName("agent")]     public string Agent { get; set; } = "";
+        [JsonPropertyName("action")]    public string Action { get; set; } = "";
+        [JsonPropertyName("status")]    public string Status { get; set; } = "SUCCESS";
+        [JsonPropertyName("timestamp")] public string Timestamp { get; set; } = "";
+        [JsonPropertyName("details")]   public string Details { get; set; } = "";
     }
 
     public interface IPlannerAgentService
     {
         Task<PlannerResult> GenerateItineraryAsync(
+            Guid tripId,
             Guid destinationId,
+            string destinationName,
             DateTime startDate,
             DateTime endDate,
             decimal budget,
-            string interests);
+            string interests,
+            string travelGroup,
+            int numberOfTravelers,
+            string budgetTier,
+            string travelPace,
+            string preferredTimes,
+            string specialRequests);
     }
 
+    /// <summary>
+    /// Phase A: Calls the Python AI microservice
+    /// (Planner → Research → Budget → Approval).
+    /// Returns the itinerary + audit log to the controller.
+    /// </summary>
     public class PlannerAgentService : IPlannerAgentService
     {
         private readonly AppDbContext _context;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _config;
+        private readonly ILogger<PlannerAgentService> _logger;
 
-        public PlannerAgentService(AppDbContext context)
+        public PlannerAgentService(
+            AppDbContext context,
+            IHttpClientFactory httpClientFactory,
+            IConfiguration config,
+            ILogger<PlannerAgentService> logger)
         {
             _context = context;
+            _httpClientFactory = httpClientFactory;
+            _config = config;
+            _logger = logger;
         }
 
         public async Task<PlannerResult> GenerateItineraryAsync(
+            Guid tripId,
             Guid destinationId,
+            string destinationName,
             DateTime startDate,
             DateTime endDate,
             decimal budget,
-            string interests)
+            string interests,
+            string travelGroup,
+            int numberOfTravelers,
+            string budgetTier,
+            string travelPace,
+            string preferredTimes,
+            string specialRequests)
         {
-            // ============================================================
-            // STEP 1: Compute trip duration (1-14 days)
-            // ============================================================
-            var totalDays = (endDate.Date - startDate.Date).Days + 1;
-            if (totalDays < 1) totalDays = 1;
-            if (totalDays > 14) totalDays = 14;
-
-            // ============================================================
-            // STEP 2: Parse interests
-            // ============================================================
-            var interestList = (interests ?? "")
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(i => i.Trim().ToLowerInvariant())
-                .Where(i => !string.IsNullOrEmpty(i))
-                .ToList();
-
-            // ============================================================
-            // STEP 3: Map interests → Category IDs
-            // ============================================================
-            List<Guid> matchingCategoryIds = new();
-            if (interestList.Count > 0)
+            // ---- Build the request body Python expects (snake_case) ----
+            var requestBody = new
             {
-                matchingCategoryIds = await _context.Categories
-                    .Where(c => interestList.Any(i => c.Name.ToLower().Contains(i)))
-                    .Select(c => c.Id)
-                    .ToListAsync();
-            }
+                trip_id = tripId.ToString(),
+                destination_id = destinationId.ToString(),
+                destination_name = destinationName,
+                start_date = startDate.ToUniversalTime().ToString("o"),
+                end_date = endDate.ToUniversalTime().ToString("o"),
+                budget = (double)budget,
+                interests = ParseCommaList(interests),
+                travel_group = string.IsNullOrWhiteSpace(travelGroup) ? "Solo" : travelGroup,
+                number_of_travelers = numberOfTravelers <= 0 ? 1 : numberOfTravelers,
+                budget_tier = string.IsNullOrWhiteSpace(budgetTier) ? "Mid" : budgetTier,
+                travel_pace = string.IsNullOrWhiteSpace(travelPace) ? "Balanced" : travelPace,
+                preferred_times = ParseCommaList(preferredTimes),
+                special_requests = specialRequests ?? ""
+            };
 
-            // ============================================================
-            // STEP 4: Fetch ALL approved experiences in this destination
-            // ============================================================
-            var allExperiences = await _context.Experiences
-                .Include(e => e.Category)
-                .Include(e => e.Guide)
-                    .ThenInclude(g => g.User)
-                .Where(e => e.DestinationId == destinationId
-                         && e.Status == ExperienceStatus.Approved)
-                .ToListAsync();
+            var baseUrl = _config["AI_SERVICE_URL"] ?? "http://localhost:8000";
+            var url = $"{baseUrl}/api/agents/generate-itinerary";
 
-            if (allExperiences.Count == 0)
+            _logger.LogInformation("Calling Python AI service: {Url}", url);
+
+            try
             {
-                return new PlannerResult
-                {
-                    Stops = BuildPlaceholderDays(
-                        totalDays,
-                        "No approved experiences in this destination yet."),
-                    WinningGuideId = null,
-                    WinningGuideName = null
-                };
-            }
+                var client = _httpClientFactory.CreateClient("AiService");
+                client.Timeout = TimeSpan.FromSeconds(60);
 
-            // ============================================================
-            // STEP 5: Group by Guide
-            // ============================================================
-            var allGuideGroups = allExperiences
-                .GroupBy(e => e.GuideId)
-                .Select(g => new
-                {
-                    GuideId = g.Key,
-                    Guide = g.First().Guide,
-                    Experiences = g.ToList(),
-                    MatchingCount = g.Count(e =>
-                        matchingCategoryIds.Contains(e.CategoryId)),
-                    RatingScore = g.First().Guide?.Rating ?? 0m,
-                    ExperienceScore = g.First().Guide?.YearsOfExperience ?? 0
-                })
-                .ToList();
+                var response = await client.PostAsJsonAsync(url, requestBody);
+                response.EnsureSuccessStatusCode();
 
-            // ✅ STRICT FILTER: If interests given, prefer guides WITH matches
-            List<dynamic> eligibleGuides;
-            if (matchingCategoryIds.Count > 0)
-            {
-                var guidesWithMatches = allGuideGroups
-                    .Where(g => g.MatchingCount > 0)
-                    .ToList<dynamic>();
+                var json = await response.Content.ReadAsStringAsync();
+                var dto = JsonSerializer.Deserialize<ItineraryResponseDto>(
+                    json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
 
-                // If at least one guide has matches, use ONLY those guides
-                eligibleGuides = guidesWithMatches.Count > 0
-                    ? guidesWithMatches
-                    : allGuideGroups.Cast<dynamic>().ToList();
-            }
-            else
-            {
-                eligibleGuides = allGuideGroups.Cast<dynamic>().ToList();
-            }
+                if (dto == null)
+                    throw new Exception("AI service returned an empty response.");
 
-            // Pick the winning guide
-            var winningGuide = eligibleGuides
-                .OrderByDescending(g => (int)g.MatchingCount)
-                .ThenByDescending(g => (decimal)g.RatingScore)
-                .ThenByDescending(g => (int)g.ExperienceScore)
-                .First();
-
-            // ============================================================
-            // STEP 6: Build candidate pool
-            // ✅ STRICT: If matching experiences exist, use ONLY those.
-            // ============================================================
-            var guideExperiences = ((IEnumerable<Experience>)winningGuide.Experiences).ToList();
-
-            var matchingExperiences = guideExperiences
-                .Where(e => matchingCategoryIds.Contains(e.CategoryId))
-                .ToList();
-
-            List<Experience> candidates;
-            if (matchingCategoryIds.Count > 0 && matchingExperiences.Count > 0)
-            {
-                // ✅ STRICT MODE — only experiences that match the chosen interests
-                candidates = matchingExperiences;
-            }
-            else
-            {
-                // Fallback — guide has no matching experiences
-                candidates = guideExperiences;
-            }
-
-            // Sort: cheapest first (within the matched set)
-            candidates = candidates
-                .OrderBy(e => e.BasePrice)
-                .ToList();
-
-            // ============================================================
-            // STEP 7: Build day-by-day itinerary
-            // ✅ KEEP the candidates order (do NOT re-sort per day)
-            // ============================================================
-            var stops = new List<TripStop>();
-            var usedIds = new HashSet<Guid>();
-            var orderIndex = 0;
-
-            // Distribute experiences evenly across days
-            var experiencesPerDay = candidates.Count > 0
-                ? Math.Max(1, (int)Math.Ceiling((double)candidates.Count / totalDays))
-                : 0;
-            experiencesPerDay = Math.Min(experiencesPerDay, 2); // max 2 per day
-
-            for (int day = 1; day <= totalDays; day++)
-            {
-                // ✅ Take next items from the ordered candidate list (NO re-sort)
-                var dayPicks = candidates
-                    .Where(e => !usedIds.Contains(e.Id))
-                    .Take(experiencesPerDay)
+                // ---- Map Python stops → C# TripStop entities ----
+                var stops = (dto.Stops ?? new List<StopDto>())
+                    .Select(s => new TripStop
+                    {
+                        ExperienceId = Guid.TryParse(s.ExperienceId, out var expId) ? expId : null,
+                        DayNumber = s.DayNumber,
+                        Title = s.Title,
+                        Description = s.Description,
+                        Location = s.Location,
+                        EstimatedCost = (decimal)s.EstimatedCost,
+                        OrderIndex = s.OrderIndex
+                    })
                     .ToList();
 
-                // If out of experiences, no more picking
-                foreach (var exp in dayPicks)
+                // ---- Parse winning guide id ----
+                Guid? winnerGuideId = null;
+                if (!string.IsNullOrWhiteSpace(dto.WinningGuideId) &&
+                    Guid.TryParse(dto.WinningGuideId, out var gid))
                 {
-                    usedIds.Add(exp.Id);
-                    stops.Add(new TripStop
-                    {
-                        ExperienceId = exp.Id,
-                        DayNumber = day,
-                        Title = exp.Title,
-                        Description = exp.Description,
-                        Location = exp.MeetingPoint ?? "TBD",
-                        EstimatedCost = exp.BasePrice,
-                        OrderIndex = orderIndex++
-                    });
+                    winnerGuideId = gid;
                 }
 
-                // If day has no pick AND we still have unused experiences → add 1
-                if (dayPicks.Count == 0)
+                return new PlannerResult
                 {
-                    var remaining = candidates
-                        .Where(e => !usedIds.Contains(e.Id))
-                        .Take(1)
-                        .ToList();
-
-                    if (remaining.Count > 0)
-                    {
-                        var exp = remaining[0];
-                        usedIds.Add(exp.Id);
-                        stops.Add(new TripStop
-                        {
-                            ExperienceId = exp.Id,
-                            DayNumber = day,
-                            Title = exp.Title,
-                            Description = exp.Description,
-                            Location = exp.MeetingPoint ?? "TBD",
-                            EstimatedCost = exp.BasePrice,
-                            OrderIndex = orderIndex++
-                        });
-                    }
-                    else
-                    {
-                        // Truly nothing left — Free Day
-                        stops.Add(new TripStop
-                        {
-                            ExperienceId = null,
-                            DayNumber = day,
-                            Title = $"Day {day}: Free Day",
-                            Description = "Explore at your own pace.",
-                            Location = winningGuide.Guide?.City ?? "TBD",
-                            EstimatedCost = 0,
-                            OrderIndex = orderIndex++
-                        });
-                    }
-                }
+                    Stops = stops,
+                    WinningGuideId = winnerGuideId,
+                    WinningGuideName = dto.WinningGuideName,
+                    BudgetValid = dto.BudgetValid,
+                    TotalEstimatedCost = (decimal)dto.TotalEstimatedCost,
+                    ApprovalStatus = dto.ApprovalStatus ?? "PENDING",
+                    ExecutionLog = dto.ExecutionLog ?? new List<ExecutionLogEntry>(),
+                    Errors = dto.Errors ?? new List<string>()
+                };
             }
-
-            return new PlannerResult
+            catch (Exception ex)
             {
-                Stops = stops,
-                WinningGuideId = winningGuide.GuideId,
-                WinningGuideName = winningGuide.Guide?.User?.FullName ?? "Local Guide"
-            };
+                _logger.LogError(ex, "AI service call failed.");
+                return new PlannerResult
+                {
+                    Stops = new List<TripStop>(),
+                    Errors = new List<string> { $"AI service unavailable: {ex.Message}" },
+                    ApprovalStatus = "ERROR"
+                };
+            }
         }
 
-        private List<TripStop> BuildPlaceholderDays(int totalDays, string reason)
+        // ---------- Helpers ----------
+        private static List<string> ParseCommaList(string? input)
         {
-            var stops = new List<TripStop>();
-            for (int day = 1; day <= totalDays; day++)
-            {
-                stops.Add(new TripStop
-                {
-                    ExperienceId = null,
-                    DayNumber = day,
-                    Title = $"Day {day}: Explore",
-                    Description = reason,
-                    Location = "TBD",
-                    EstimatedCost = 0,
-                    OrderIndex = day - 1
-                });
-            }
-            return stops;
+            if (string.IsNullOrWhiteSpace(input)) return new List<string>();
+            return input
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList();
+        }
+
+        // ---------- Response DTOs (snake_case from Python) ----------
+        private class ItineraryResponseDto
+        {
+            [JsonPropertyName("trip_id")]              public string? TripId { get; set; }
+            [JsonPropertyName("stops")]                public List<StopDto>? Stops { get; set; }
+            [JsonPropertyName("winning_guide_id")]     public string? WinningGuideId { get; set; }
+            [JsonPropertyName("winning_guide_name")]   public string? WinningGuideName { get; set; }
+            [JsonPropertyName("budget_valid")]         public bool BudgetValid { get; set; }
+            [JsonPropertyName("total_estimated_cost")] public double TotalEstimatedCost { get; set; }
+            [JsonPropertyName("approval_status")]      public string? ApprovalStatus { get; set; }
+            [JsonPropertyName("execution_log")]        public List<ExecutionLogEntry>? ExecutionLog { get; set; }
+            [JsonPropertyName("errors")]               public List<string>? Errors { get; set; }
+        }
+
+        private class StopDto
+        {
+            [JsonPropertyName("experience_id")]  public string? ExperienceId { get; set; }
+            [JsonPropertyName("day_number")]     public int DayNumber { get; set; }
+            [JsonPropertyName("title")]          public string Title { get; set; } = "";
+            [JsonPropertyName("description")]    public string Description { get; set; } = "";
+            [JsonPropertyName("location")]       public string Location { get; set; } = "";
+            [JsonPropertyName("estimated_cost")] public double EstimatedCost { get; set; }
+            [JsonPropertyName("order_index")]    public int OrderIndex { get; set; }
         }
     }
 }

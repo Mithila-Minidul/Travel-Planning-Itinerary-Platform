@@ -3,6 +3,7 @@ using System;
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923050527_AddTripBuilderFields")]
+    partial class AddTripBuilderFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,114 +24,6 @@ namespace backend.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Backend.Models.AgentExecutionLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("AgentName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("AgentWorkflowId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Details")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<long>("ElapsedMs")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("ExecutedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("SequenceNumber")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AgentWorkflowId");
-
-                    b.ToTable("AgentExecutionLogs");
-                });
-
-            modelBuilder.Entity("Backend.Models.AgentWorkflow", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("BudgetValid")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Objective")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime>("StartedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<decimal>("TotalEstimatedCost")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("TotalSteps")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("TripId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("WinningGuideName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TripId");
-
-                    b.ToTable("AgentWorkflows");
-                });
 
             modelBuilder.Entity("Backend.Models.Category", b =>
                 {
@@ -173,7 +68,7 @@ namespace backend.Migrations
                             IconName = "hiking",
                             IsActive = true,
                             Name = "Hiking",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5869)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1054)
                         },
                         new
                         {
@@ -183,7 +78,7 @@ namespace backend.Migrations
                             IconName = "tea",
                             IsActive = true,
                             Name = "Tea & Plantation",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5878)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1065)
                         },
                         new
                         {
@@ -193,7 +88,7 @@ namespace backend.Migrations
                             IconName = "temple",
                             IsActive = true,
                             Name = "Culture & Heritage",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5882)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1070)
                         },
                         new
                         {
@@ -203,7 +98,7 @@ namespace backend.Migrations
                             IconName = "beach",
                             IsActive = true,
                             Name = "Beach & Surfing",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5885)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1075)
                         },
                         new
                         {
@@ -213,7 +108,7 @@ namespace backend.Migrations
                             IconName = "wildlife",
                             IsActive = true,
                             Name = "Wildlife & Safari",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5888)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1079)
                         },
                         new
                         {
@@ -223,7 +118,7 @@ namespace backend.Migrations
                             IconName = "train",
                             IsActive = true,
                             Name = "Train Journeys",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5892)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1083)
                         },
                         new
                         {
@@ -233,7 +128,7 @@ namespace backend.Migrations
                             IconName = "nature",
                             IsActive = true,
                             Name = "Nature & Waterfalls",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5910)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1106)
                         },
                         new
                         {
@@ -243,7 +138,7 @@ namespace backend.Migrations
                             IconName = "food",
                             IsActive = true,
                             Name = "Food & Cooking",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5913)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1111)
                         },
                         new
                         {
@@ -253,7 +148,7 @@ namespace backend.Migrations
                             IconName = "festival",
                             IsActive = true,
                             Name = "Festivals & Events",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5917)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1277)
                         });
                 });
 
@@ -333,7 +228,7 @@ namespace backend.Migrations
                             Longitude = 81.046599999999998,
                             Name = "Ella",
                             ProvinceState = "Uva Province",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(6018)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1422)
                         },
                         new
                         {
@@ -347,7 +242,7 @@ namespace backend.Migrations
                             Longitude = 80.633700000000005,
                             Name = "Kandy",
                             ProvinceState = "Central Province",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(6024)
+                            UpdatedAt = new DateTime(2026, 9, 23, 5, 5, 26, 734, DateTimeKind.Utc).AddTicks(1432)
                         });
                 });
 
@@ -755,33 +650,11 @@ namespace backend.Migrations
                             Email = "admin@travelapp.com",
                             FullName = "System Administrator",
                             IsActive = true,
-                            PasswordHash = "$2a$11$3u8JSF57V0uNwYQs6n3W9OcXmp3FGpj1V0pVn5ilWC4S0Ba6U02Ue",
+                            PasswordHash = "$2a$11$JlJ.Fny92I2fdDYAqiXYx.Y5Ph0dPyQUi/NwWeDo0Af1IqRNvcE7S",
                             PhoneNumber = "+94770000000",
                             Role = "Admin",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
-                });
-
-            modelBuilder.Entity("Backend.Models.AgentExecutionLog", b =>
-                {
-                    b.HasOne("Backend.Models.AgentWorkflow", "AgentWorkflow")
-                        .WithMany("ExecutionLogs")
-                        .HasForeignKey("AgentWorkflowId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("AgentWorkflow");
-                });
-
-            modelBuilder.Entity("Backend.Models.AgentWorkflow", b =>
-                {
-                    b.HasOne("Backend.Models.Trip", "Trip")
-                        .WithMany()
-                        .HasForeignKey("TripId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Trip");
                 });
 
             modelBuilder.Entity("Backend.Models.Experience", b =>
@@ -871,11 +744,6 @@ namespace backend.Migrations
                     b.Navigation("Experience");
 
                     b.Navigation("Trip");
-                });
-
-            modelBuilder.Entity("Backend.Models.AgentWorkflow", b =>
-                {
-                    b.Navigation("ExecutionLogs");
                 });
 
             modelBuilder.Entity("Backend.Models.Category", b =>
