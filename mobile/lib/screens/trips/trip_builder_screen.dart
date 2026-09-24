@@ -65,29 +65,64 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
     super.dispose();
   }
 
+  static const int MAX_TRIP_DAYS = 14;
+
   Future<void> _pickDate(bool isStart) async {
+    DateTime firstDate;
+    DateTime lastDate;
+
+    if (isStart) {
+      firstDate = DateTime.now();
+      // Allow future start dates up to 1 year ahead
+      lastDate = DateTime.now().add(const Duration(days: 365));
+    } else {
+      firstDate = _startDate;
+      // End date can be at most 14 days after start (inclusive)
+      lastDate = _startDate.add(Duration(days: MAX_TRIP_DAYS - 1));
+    }
+
     final picked = await showDatePicker(
       context: context,
       initialDate: isStart ? _startDate : _endDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
-    if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _startDate = picked;
-          if (_endDate.isBefore(_startDate)) {
-            _endDate = _startDate.add(const Duration(days: 2));
-          }
-        } else {
-          _endDate = picked;
+
+    if (picked == null) return;
+
+    setState(() {
+      if (isStart) {
+        _startDate = picked;
+        // Auto-adjust end date if it exceeds the 14-day window
+        final maxEnd = _startDate.add(Duration(days: MAX_TRIP_DAYS - 1));
+        if (_endDate.isAfter(maxEnd)) {
+          _endDate = maxEnd;
         }
-      });
-    }
+        if (_endDate.isBefore(_startDate)) {
+          _endDate = _startDate.add(const Duration(days: 1));
+        }
+      } else {
+        _endDate = picked;
+      }
+    });
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // ✅ Prevent trips longer than the AI can plan (max 14 days)
+    final totalDays = _endDate.difference(_startDate).inDays + 1;
+    if (totalDays > MAX_TRIP_DAYS) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Trips are limited to $MAX_TRIP_DAYS days. '
+            'AI currently plans up to $MAX_TRIP_DAYS days maximum.',
+          ),
+        ),
+      );
+      return;
+    }
 
     if (_endDate.isBefore(_startDate)) {
       ScaffoldMessenger.of(context).showSnackBar(
