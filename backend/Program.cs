@@ -34,6 +34,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPlannerAgentService, PlannerAgentService>();
 builder.Services.AddHttpClient<IWeatherService, WeatherService>();
+builder.Services.AddHttpClient("AiService");
 builder.Services.AddScoped<ImageUploadService>();
 
 // Member 1 Service Registrations
