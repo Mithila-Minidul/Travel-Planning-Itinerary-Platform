@@ -9,7 +9,7 @@ class Settings:
 
     # Matches the key in ai-service/.env
     BACKEND_API_BASE_URL: str = os.getenv(
-        "BACKEND_API_URL", "http://localhost:5182/api"
+        "BACKEND_API_URL", "http://localhost:7000/api"
     )
 
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
