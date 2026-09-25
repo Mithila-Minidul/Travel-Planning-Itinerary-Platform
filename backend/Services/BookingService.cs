@@ -182,7 +182,7 @@ namespace Backend.Services
         // ---------- Helpers ----------
         private IQueryable<Booking> Query() => _context.Bookings
             .Include(b => b.Trip)
-            .Include(b => b.Experience)
+            .Include(b => b.Experience).ThenInclude(e => e.Destination)
             .Include(b => b.Traveler)
             .Include(b => b.Guide).ThenInclude(g => g.User)
             .Include(b => b.Payment);
@@ -201,7 +201,7 @@ namespace Backend.Services
             TripStopId = b.TripStopId,
             ExperienceId = b.ExperienceId,
             ExperienceTitle = b.Experience?.Title ?? "",
-            DestinationName = b.Experience?.Title ?? "", // replaced below if Destination loaded
+            DestinationName = b.Experience?.Destination?.Name ?? "",
             TravelerName = b.Traveler?.FullName ?? "",
             TravelerId = b.TravelerId,
             GuideName = b.Guide?.User?.FullName ?? "",
@@ -218,7 +218,10 @@ namespace Backend.Services
             CreatedAt = b.CreatedAt,
             PaymentStatus = b.Payment?.Status,
             PaymentAmount = b.Payment?.Amount,
-            PaymentMethod = b.Payment?.Method
+            PaymentMethod = b.Payment?.Method,
+            RefundAmount = b.Payment?.RefundAmount,
+            RefundPercentage = b.Payment?.RefundPercentage,
+            RefundedAt = b.Payment?.RefundedAt
         };
 
         private static string GenerateConfirmationCode()
