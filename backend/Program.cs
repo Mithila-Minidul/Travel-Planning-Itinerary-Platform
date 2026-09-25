@@ -37,6 +37,10 @@ builder.Services.AddHttpClient<IWeatherService, WeatherService>();
 builder.Services.AddHttpClient("AiService");
 builder.Services.AddScoped<ImageUploadService>();
 
+// ============ MEMBER 3 — BOOKINGS + PAYMENTS ============
+builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
 // Member 1 Service Registrations
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IDestinationService, DestinationService>();
