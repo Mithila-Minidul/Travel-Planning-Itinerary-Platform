@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { tripAPI } from '../api/trips';
+import { agentWorkflowAPI } from '../api/agentWorkflows';
 import { useAuth } from '../context/AuthContext';
 import {
   CheckCircle, Cancel, ArrowBack, CalendarToday, AttachMoney,
@@ -14,9 +15,11 @@ const TripDetailPage = () => {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [agentWorkflow, setAgentWorkflow] = useState(null);
 
   useEffect(() => {
     fetchTrip();
+    fetchAgentWorkflow();
   }, [id]);
 
   const fetchTrip = async () => {
@@ -30,11 +33,22 @@ const TripDetailPage = () => {
     }
   };
 
+  const fetchAgentWorkflow = async () => {
+    try {
+      const res = await agentWorkflowAPI.getByTrip(id);
+      setAgentWorkflow(res.data);
+    } catch {
+      // No workflow exists yet for older trips — fail silently
+      setAgentWorkflow(null);
+    }
+  };
+
   const handleReview = async (status) => {
     setReviewLoading(true);
     try {
       await tripAPI.reviewTrip(id, { status });
       await fetchTrip();
+      await fetchAgentWorkflow();
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to review trip.');
     } finally {
@@ -153,7 +167,7 @@ const TripDetailPage = () => {
           </div>
         )}
 
-        {/* ================= ✅ NEW: TRIP PREFERENCES ================= */}
+        {/* ================= TRIP PREFERENCES ================= */}
         {hasPreferences && (
           <div className="mt-4 rounded-lg bg-slate-50 border border-slate-200 p-4">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
@@ -251,6 +265,70 @@ const TripDetailPage = () => {
           </div>
         )}
       </div>
+
+      {/* ================= AI EXECUTION LOG (Audit Trail) ================= */}
+      {agentWorkflow && agentWorkflow.executionLogs?.length > 0 && (
+        <div className="rounded-xl border bg-white p-6 shadow-sm mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <SmartToy className="text-indigo-600" />
+              <h2 className="text-lg font-semibold text-gray-800">
+                AI Execution Log
+              </h2>
+            </div>
+            <span className="text-xs text-slate-400">
+              {agentWorkflow.executionLogs.length} step(s) ·{' '}
+              {agentWorkflow.totalSteps} total
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-500 mb-4">
+            Audit trail of what each AI agent did during itinerary generation.
+          </p>
+
+          <div className="relative border-l border-slate-200 ml-4 space-y-4 pb-1">
+            {agentWorkflow.executionLogs.map((log) => {
+              const statusMap = {
+                SUCCESS: { chip: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-100 text-emerald-600', icon: '✓' },
+                WARNING: { chip: 'bg-amber-50 text-amber-700',     dot: 'bg-amber-100 text-amber-600',     icon: '⚠' },
+                ERROR:   { chip: 'bg-rose-50 text-rose-700',       dot: 'bg-rose-100 text-rose-600',       icon: '✕' },
+              };
+              const s = statusMap[log.status] || statusMap.SUCCESS;
+              return (
+                <div key={log.id} className="ml-6 relative">
+                  <span className={`absolute -left-[31px] top-0 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-white text-xs font-bold ${s.dot}`}>
+                    {s.icon}
+                  </span>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="text-[11px] text-slate-400">#{log.sequenceNumber}</span>
+                      <span className="rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5 text-[11px] font-semibold">
+                        {log.agentName}
+                      </span>
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${s.chip}`}>
+                        {log.status}
+                      </span>
+                      {log.elapsedMs > 0 && (
+                        <span className="text-[11px] text-slate-400 ml-auto">
+                          {log.elapsedMs < 1000
+                            ? `${log.elapsedMs}ms`
+                            : `${(log.elapsedMs / 1000).toFixed(2)}s`}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-medium text-slate-800">{log.action}</p>
+                    {log.details && (
+                      <p className="mt-0.5 text-xs text-slate-500 leading-relaxed">
+                        {log.details}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ================= REVIEW ACTIONS ================= */}
       {trip.status === 'Pending' && isAgent && (

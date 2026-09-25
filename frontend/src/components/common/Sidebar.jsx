@@ -15,6 +15,7 @@ import {
   Verified,
   RateReview,
   SmartToy,
+  Assessment
 } from '@mui/icons-material';
 
 const Sidebar = () => {
@@ -46,6 +47,7 @@ const Sidebar = () => {
     menuItems.push(
       { label: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
       { label: 'AI Review Queue', icon: <SmartToy />, path: '/ai-review' },
+      { label: 'AI Performance', icon: <Assessment  />, path: '/ai-performance' },
       { label: 'All Trips', icon: <Tour />, path: '/trips' },
     );
   }

@@ -21,6 +21,7 @@ import TravelAgentsPage from './pages/TravelAgentsPage';
 import TravelersPage from './pages/TravelersPage';
 import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
+import AIPerformancePage from './pages/AIPerformancePage';
 
 function App() {
   return (
@@ -104,6 +105,11 @@ function App() {
             <Route path="/trips/:id" element={
               <ProtectedRoute allowedRoles={['Admin', 'TravelAgent', 'Traveler']}>
                 <TripDetailPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/ai-performance" element={
+              <ProtectedRoute allowedRoles={['Admin', 'TravelAgent']}>
+                <AIPerformancePage />
               </ProtectedRoute>
             } />
           </Route>
