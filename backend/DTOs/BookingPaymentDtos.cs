@@ -42,6 +42,11 @@ namespace Backend.DTOs
         public string? PaymentStatus { get; set; }
         public decimal? PaymentAmount { get; set; }
         public string? PaymentMethod { get; set; }
+
+        // Refund details (nullable — populated only after refund)
+        public decimal? RefundAmount { get; set; }
+        public int? RefundPercentage { get; set; }
+        public DateTime? RefundedAt { get; set; }
     }
 
     public class BookingCancelDto
