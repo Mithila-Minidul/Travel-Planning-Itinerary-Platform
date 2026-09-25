@@ -116,6 +116,8 @@ class ResearchAgent:
                         category=exp.get("categoryName", ""),
                         calculated_price=float(exp.get("currentCalculatedPrice", 0)),
                         duration_hours=int(exp.get("durationHours", 0)),
+                        start_time=exp.get("startTime"),
+                        end_time=exp.get("endTime"),
                         weather_match_status=status,
                         recommendation_reason=reason,
                     )
@@ -229,6 +231,8 @@ class ResearchAgent:
             category=exp.get("categoryName", ""),
             calculated_price=float(exp.get("currentCalculatedPrice", 0)),
             duration_hours=int(exp.get("durationHours", 0)),
+            start_time=exp.get("startTime"),
+            end_time=exp.get("endTime"),
             weather_match_status=self._fallback_status(exp, weather_info),
             recommendation_reason=self._fallback_reason(exp, weather_info),
         )
