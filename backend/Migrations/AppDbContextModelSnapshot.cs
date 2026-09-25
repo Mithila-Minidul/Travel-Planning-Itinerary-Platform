@@ -130,6 +130,87 @@ namespace backend.Migrations
                     b.ToTable("AgentWorkflows");
                 });
 
+            modelBuilder.Entity("Backend.Models.Booking", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("BookingDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CheckedInAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ConfirmationCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ExperienceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("GuideId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("NumberOfGuests")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("TravelerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TripStopId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConfirmationCode")
+                        .IsUnique();
+
+                    b.HasIndex("ExperienceId");
+
+                    b.HasIndex("GuideId");
+
+                    b.HasIndex("TravelerId");
+
+                    b.HasIndex("TripId");
+
+                    b.HasIndex("TripStopId");
+
+                    b.ToTable("Bookings");
+                });
+
             modelBuilder.Entity("Backend.Models.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -173,7 +254,7 @@ namespace backend.Migrations
                             IconName = "hiking",
                             IsActive = true,
                             Name = "Hiking",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5869)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4682)
                         },
                         new
                         {
@@ -183,7 +264,7 @@ namespace backend.Migrations
                             IconName = "tea",
                             IsActive = true,
                             Name = "Tea & Plantation",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5878)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4720)
                         },
                         new
                         {
@@ -193,7 +274,7 @@ namespace backend.Migrations
                             IconName = "temple",
                             IsActive = true,
                             Name = "Culture & Heritage",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5882)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4725)
                         },
                         new
                         {
@@ -203,7 +284,7 @@ namespace backend.Migrations
                             IconName = "beach",
                             IsActive = true,
                             Name = "Beach & Surfing",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5885)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4731)
                         },
                         new
                         {
@@ -213,7 +294,7 @@ namespace backend.Migrations
                             IconName = "wildlife",
                             IsActive = true,
                             Name = "Wildlife & Safari",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5888)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4734)
                         },
                         new
                         {
@@ -223,7 +304,7 @@ namespace backend.Migrations
                             IconName = "train",
                             IsActive = true,
                             Name = "Train Journeys",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5892)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4737)
                         },
                         new
                         {
@@ -233,7 +314,7 @@ namespace backend.Migrations
                             IconName = "nature",
                             IsActive = true,
                             Name = "Nature & Waterfalls",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5910)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4741)
                         },
                         new
                         {
@@ -243,7 +324,7 @@ namespace backend.Migrations
                             IconName = "food",
                             IsActive = true,
                             Name = "Food & Cooking",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5913)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4759)
                         },
                         new
                         {
@@ -253,7 +334,7 @@ namespace backend.Migrations
                             IconName = "festival",
                             IsActive = true,
                             Name = "Festivals & Events",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(5917)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4762)
                         });
                 });
 
@@ -333,7 +414,7 @@ namespace backend.Migrations
                             Longitude = 81.046599999999998,
                             Name = "Ella",
                             ProvinceState = "Uva Province",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(6018)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(5009)
                         },
                         new
                         {
@@ -347,7 +428,7 @@ namespace backend.Migrations
                             Longitude = 80.633700000000005,
                             Name = "Kandy",
                             ProvinceState = "Central Province",
-                            UpdatedAt = new DateTime(2026, 9, 24, 9, 2, 48, 656, DateTimeKind.Utc).AddTicks(6024)
+                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(5016)
                         });
                 });
 
@@ -536,6 +617,70 @@ namespace backend.Migrations
                         .IsUnique();
 
                     b.ToTable("LocalGuides");
+                });
+
+            modelBuilder.Entity("Backend.Models.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("RefundPercentage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RefundReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("TransactionId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId")
+                        .IsUnique();
+
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("Backend.Models.Trip", b =>
@@ -755,7 +900,7 @@ namespace backend.Migrations
                             Email = "admin@travelapp.com",
                             FullName = "System Administrator",
                             IsActive = true,
-                            PasswordHash = "$2a$11$3u8JSF57V0uNwYQs6n3W9OcXmp3FGpj1V0pVn5ilWC4S0Ba6U02Ue",
+                            PasswordHash = "$2a$11$NnTdzwJyfbQEYgZzgJaqFOB8siSmOCSsUfuJCC.PxCtZFoXPWncNm",
                             PhoneNumber = "+94770000000",
                             Role = "Admin",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
@@ -782,6 +927,49 @@ namespace backend.Migrations
                         .IsRequired();
 
                     b.Navigation("Trip");
+                });
+
+            modelBuilder.Entity("Backend.Models.Booking", b =>
+                {
+                    b.HasOne("Backend.Models.Experience", "Experience")
+                        .WithMany()
+                        .HasForeignKey("ExperienceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.LocalGuide", "Guide")
+                        .WithMany()
+                        .HasForeignKey("GuideId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.User", "Traveler")
+                        .WithMany()
+                        .HasForeignKey("TravelerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Trip", "Trip")
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.TripStop", "TripStop")
+                        .WithMany()
+                        .HasForeignKey("TripStopId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Experience");
+
+                    b.Navigation("Guide");
+
+                    b.Navigation("Traveler");
+
+                    b.Navigation("Trip");
+
+                    b.Navigation("TripStop");
                 });
 
             modelBuilder.Entity("Backend.Models.Experience", b =>
@@ -820,6 +1008,17 @@ namespace backend.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Backend.Models.Payment", b =>
+                {
+                    b.HasOne("Backend.Models.Booking", "Booking")
+                        .WithOne("Payment")
+                        .HasForeignKey("Backend.Models.Payment", "BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
                 });
 
             modelBuilder.Entity("Backend.Models.Trip", b =>
@@ -876,6 +1075,11 @@ namespace backend.Migrations
             modelBuilder.Entity("Backend.Models.AgentWorkflow", b =>
                 {
                     b.Navigation("ExecutionLogs");
+                });
+
+            modelBuilder.Entity("Backend.Models.Booking", b =>
+                {
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("Backend.Models.Category", b =>
