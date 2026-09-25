@@ -22,6 +22,9 @@ import TravelersPage from './pages/TravelersPage';
 import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import AIPerformancePage from './pages/AIPerformancePage';
+import BookingsPage from './pages/BookingsPage';
+import PaymentDashboardPage from './pages/PaymentDashboardPage';
+import RefundManagementPage from './pages/RefundManagementPage';
 
 function App() {
   return (
@@ -110,6 +113,21 @@ function App() {
             <Route path="/ai-performance" element={
               <ProtectedRoute allowedRoles={['Admin', 'TravelAgent']}>
                 <AIPerformancePage />
+              </ProtectedRoute>
+            } />
+                        <Route path="/bookings" element={
+              <ProtectedRoute allowedRoles={['Admin', 'LocalGuide', 'Traveler']}>
+                <BookingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/payments" element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <PaymentDashboardPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/refunds" element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <RefundManagementPage />
               </ProtectedRoute>
             } />
           </Route>
