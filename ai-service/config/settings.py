@@ -9,7 +9,7 @@ class Settings:
 
     # Matches the key in ai-service/.env
     BACKEND_API_BASE_URL: str = os.getenv(
-        "BACKEND_API_URL", "http://localhost:5182/api"
+        "BACKEND_API_URL", "http://localhost:7000/api"
     )
 
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
@@ -17,7 +17,7 @@ class Settings:
     # ================= AI / LLM =================
     # Read from .env — do not hardcode keys in source.
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-    CHAT_MODEL: str = os.getenv("CHAT_MODEL", "gemini-2.5-flash-lite")
+    CHAT_MODEL: str = os.getenv("CHAT_MODEL", "gemini-3.5-flash-lite")
 
 
 settings = Settings()
