@@ -5,20 +5,20 @@ Owner: Member 4 (Orchestrator)
 
 Flow:
     Planner → Research → Budget → Approval
-    Each agent writes to a shared execution log.
 
-Business rule enforced by the orchestrator:
-    ONE GUIDE PER TRIP
-    - Research returns all matching experiences.
-    - Orchestrator groups them by guide_id, scores each guide,
-      and picks the winner.
-    - Only the winner's experiences are used in the itinerary.
-    - The winning guide's id and name are returned to C#.
-
-If any agent fails, the workflow halts safely and returns an error
-response with the execution log so far.
+Business rules enforced by the orchestrator:
+  1. ONE GUIDE PER TRIP — all stops come from a single guide.
+  2. INTEREST MATCH — only experiences matching the traveler's
+     chosen interests are eligible.
+  3. PREFERRED TIMES — filter by the experience's start-time bucket
+     (Morning / Afternoon / Evening).
+  4. BUDGET TIER — sort experiences by tier preference
+     (Budget → cheapest first; Luxury → most expensive first).
+  5. BALANCED DISTRIBUTION — spread experiences across all trip days
+     instead of front-loading Day 1.
 """
 from datetime import datetime, timezone
+from math import ceil
 from typing import List, Dict, Optional
 
 from agents import (
@@ -75,10 +75,8 @@ class TripPlannerWorkflow:
         )
 
     def _error_response(
-        self,
-        request: ItineraryRequest,
-        log: List[ExecutionLogEntry],
-        errors: List[str],
+        self, request: ItineraryRequest,
+        log: List[ExecutionLogEntry], errors: List[str],
     ) -> ItineraryResponse:
         return ItineraryResponse(
             trip_id=request.trip_id,
@@ -90,38 +88,41 @@ class TripPlannerWorkflow:
             errors=errors,
         )
 
+    def _empty_response(
+        self, request: ItineraryRequest,
+        log: List[ExecutionLogEntry], warnings: List[str],
+    ) -> ItineraryResponse:
+        return ItineraryResponse(
+            trip_id=request.trip_id,
+            stops=[],
+            winning_guide_id=None,
+            winning_guide_name=None,
+            winning_guide_city=None,
+            budget_valid=False,
+            total_estimated_cost=0.0,
+            approval_status="PENDING",
+            execution_log=log,
+            errors=warnings,
+        )
+
     # ============================================================
     # ONE GUIDE PER TRIP
     # ============================================================
     def _pick_winning_guide(
-        self,
-        experiences: List[RecommendedExperience],
-        interests: List[str],
+        self, experiences: List[RecommendedExperience],
     ) -> Optional[str]:
-        """
-        Group experiences by guide_id and pick the winning guide.
-
-        Scoring (higher is better):
-            1. Number of experiences matching the traveler's interests
-            2. Total experiences from that guide (tie-breaker)
-
-        Returns the winning guide_id, or None if no experiences.
-        """
         if not experiences:
             return None
 
-        normalized = {i.strip().lower() for i in (interests or []) if i.strip()}
-
-        # ---- Group by guide_id ----
         groups: Dict[str, List[RecommendedExperience]] = {}
         for exp in experiences:
             gid = (exp.guide_id or "").strip()
             if not gid:
-                continue  # skip experiences without a guide_id
+                continue
             groups.setdefault(gid, []).append(exp)
 
-        # ---- Fallback: group by guide_name if guide_id missing ----
         if not groups:
+            # Fallback to grouping by name
             by_name: Dict[str, List[RecommendedExperience]] = {}
             for exp in experiences:
                 key = (exp.guide_name or "").strip() or "unknown"
@@ -129,18 +130,60 @@ class TripPlannerWorkflow:
             winner_name = max(by_name.items(), key=lambda kv: len(kv[1]))[0]
             return by_name[winner_name][0].guide_id or winner_name
 
-        # ---- Score each guide ----
-        def score(item):
-            gid, exps = item
-            matching = sum(
-                1
-                for e in exps
-                if (e.category or "").strip().lower() in normalized
-            )
-            return (matching, len(exps))
+        # Winner = most matching experiences
+        return max(groups.items(), key=lambda kv: len(kv[1]))[0]
 
-        winner_id, _winner_exps = max(groups.items(), key=score)
-        return winner_id
+            # ============================================================
+    # Category matching — substring-safe
+    # ============================================================
+    @staticmethod
+    def _category_matches(category: Optional[str], interests: set) -> bool:
+        """
+        Fuzzy match: 'Culture' should match 'Culture & Heritage',
+        'Nature' should match 'Nature & Waterfalls', etc.
+        Checks both directions so either side can be shorter.
+        """
+        cat = (category or "").strip().lower()
+        if not cat:
+            return False
+        for interest in interests:
+            i = (interest or "").strip().lower()
+            if not i:
+                continue
+            if i in cat or cat in i:
+                return True
+        return False
+
+    # ============================================================
+    # Time-bucket helpers
+    # ============================================================
+    @staticmethod
+    def _hour_of(start_time: Optional[str]) -> Optional[int]:
+        if not start_time or len(start_time) < 2:
+            return None
+        try:
+            return int(start_time[:2])
+        except ValueError:
+            return None
+
+    @classmethod
+    def _matches_preferred_times(
+        cls, exp: RecommendedExperience, preferred: List[str],
+    ) -> bool:
+        if not preferred:
+            return True
+        hh = cls._hour_of(exp.start_time)
+        if hh is None:
+            return True  # no start time → don't exclude
+        for p in preferred:
+            pl = p.strip().lower()
+            if pl == "morning" and hh < 12:
+                return True
+            if pl == "afternoon" and 12 <= hh < 17:
+                return True
+            if pl == "evening" and hh >= 17:
+                return True
+        return False
 
     # ============================================================
     # Main workflow
@@ -176,7 +219,7 @@ class TripPlannerWorkflow:
             research = await self.researcher.execute(
                 ResearchAgentRequest(
                     destination_name=request.destination_name,
-                    category_name=None,  # get all; orchestrator filters later
+                    category_name=None,
                     max_budget=request.budget,
                     travel_date=request.start_date,
                 )
@@ -191,54 +234,160 @@ class TripPlannerWorkflow:
             errors.append(f"Research failed: {e}")
             return self._error_response(request, execution_log, errors)
 
-        # ================= ONE GUIDE PER TRIP =================
         all_experiences = research.recommended_experiences or []
 
-        winner_guide_id = self._pick_winning_guide(
-            all_experiences, request.interests
+        # ============================================================
+        # FILTER 1 — INTEREST MATCH
+        # ============================================================
+        # Build interest set from the traveler's actual interests (which the
+        # Planner also used to seed per-day preferred_categories).
+        plan_interests = {i.strip().lower() for i in (request.interests or []) if i.strip()}
+
+        if plan_interests:
+            interest_matched = [
+                e for e in all_experiences
+                if self._category_matches(e.category, plan_interests)
+            ]
+        else:
+            interest_matched = list(all_experiences)
+
+        if not interest_matched:
+            available_categories = sorted({
+                (e.category or "").strip()
+                for e in all_experiences
+                if (e.category or "").strip()
+            })
+            self._log(
+                execution_log,
+                "Orchestrator",
+                "No experiences match the selected interests",
+                status="WARNING",
+                details=(
+                    f"Traveler requested: {', '.join(request.interests)}. "
+                    f"Available categories in {request.destination_name}: "
+                    f"{', '.join(available_categories) or 'none'}. No match."
+                ),
+            )
+            return self._empty_response(
+                request, execution_log,
+                [
+                    f"No experiences available for interests: "
+                    f"{', '.join(request.interests)}"
+                ],
+            )
+
+        self._log(
+            execution_log,
+            "Orchestrator",
+            f"Filtered to {len(interest_matched)} matching interest(s)",
+            details=(
+                f"Interests: {', '.join(request.interests)} — "
+                f"{len(interest_matched)} of {len(all_experiences)} kept."
+            ),
         )
 
+        # ============================================================
+        # FILTER 2 — PREFERRED TIMES
+        # ============================================================
+        preferred_times_list = request.preferred_times or []
+
+        if preferred_times_list:
+            time_matched = [
+                e for e in interest_matched
+                if self._matches_preferred_times(e, preferred_times_list)
+            ]
+
+            if not time_matched:
+                # STRICT MODE — no fallback. Empty trip + clear error.
+                available_times = sorted({
+                    (e.start_time or "unknown")
+                    for e in interest_matched
+                })
+                self._log(
+                    execution_log,
+                    "Orchestrator",
+                    "No experiences match preferred times — strict mode",
+                    status="WARNING",
+                    details=(
+                        f"Traveler preferred: {', '.join(preferred_times_list)}. "
+                        f"None of the {len(interest_matched)} interest-matched "
+                        f"experience(s) start at those times. "
+                        f"Available start times: {', '.join(available_times) or 'none'}."
+                    ),
+                )
+                return self._empty_response(
+                    request, execution_log,
+                    [
+                        f"No experiences available for preferred times: "
+                        f"{', '.join(preferred_times_list)}. "
+                        f"Available start times: {', '.join(available_times) or 'none'}."
+                    ],
+                )
+
+            self._log(
+                execution_log,
+                "Orchestrator",
+                f"Time filter kept {len(time_matched)} experience(s)",
+                details=f"Preferred times: {', '.join(preferred_times_list)}",
+            )
+        else:
+            time_matched = list(interest_matched)
+
+        # ============================================================
+        # SORT BY BUDGET TIER
+        # ============================================================
+        tier = (request.budget_tier or "Mid").strip().lower()
+        if tier == "luxury":
+            filtered_experiences = sorted(
+                time_matched, key=lambda e: -e.calculated_price
+            )
+        else:
+            # Budget or Mid → cheapest first
+            filtered_experiences = sorted(
+                time_matched, key=lambda e: e.calculated_price
+            )
+
+        self._log(
+            execution_log,
+            "Orchestrator",
+            f"Prepared {len(filtered_experiences)} candidate(s) for guide selection",
+            details=(
+                f"Budget tier: {request.budget_tier or 'Mid'} — "
+                f"pool sorted accordingly."
+            ),
+        )
+
+        # ============================================================
+        # ONE GUIDE PER TRIP
+        # ============================================================
+        winner_guide_id = self._pick_winning_guide(filtered_experiences)
         if winner_guide_id is None:
             self._log(
                 execution_log,
                 "Orchestrator",
-                "No experiences available — empty itinerary",
+                "No guide available after filtering",
                 status="WARNING",
             )
-            return ItineraryResponse(
-                trip_id=request.trip_id,
-                stops=[],
-                winning_guide_id=None,
-                winning_guide_name=None,
-                winning_guide_city=None,
-                budget_valid=False,
-                total_estimated_cost=0.0,
-                approval_status="PENDING",
-                execution_log=execution_log,
-                errors=[],
+            return self._empty_response(
+                request, execution_log,
+                ["No matching guide found after applying filters."],
             )
 
-        # Keep ONLY the winner's experiences
         guide_experiences = [
-            e
-            for e in all_experiences
+            e for e in filtered_experiences
             if (e.guide_id or "").strip() == winner_guide_id
         ]
 
-        # Fallback: match by guide_name if guide_id failed
+        # Fallback: match by name if guide_id match produced nothing
         if not guide_experiences:
             first = next(
-                (
-                    e
-                    for e in all_experiences
-                    if (e.guide_id or "") == winner_guide_id
-                ),
+                (e for e in filtered_experiences
+                 if (e.guide_id or "").strip() == winner_guide_id),
                 None,
             )
             if first:
                 guide_experiences = [
-                    e
-                    for e in all_experiences
+                    e for e in filtered_experiences
                     if e.guide_name == first.guide_name
                 ]
 
@@ -254,20 +403,39 @@ class TripPlannerWorkflow:
             details="ONE GUIDE PER TRIP rule applied",
         )
 
-        # ================= BUILD STOPS =================
+        if not guide_experiences:
+            return self._empty_response(
+                request, execution_log,
+                ["No experiences left after ONE GUIDE PER TRIP filter."],
+            )
+
+        # ============================================================
+        # BUILD STOPS — BALANCED DISTRIBUTION
+        # ============================================================
+        total_days = len(plan.days)
+        total_exp = len(guide_experiences)
+
         stops: List[TripStop] = []
         prices: List[float] = []
-        order = 0            # cursor into guide_experiences
-        stop_index = 0       # unique OrderIndex per TripStop row
-        free_day_count = 0   # days with no experience (Fix #5)
+        stop_index = 0
+        order = 0
+        free_day_count = 0
 
+        # Distribute evenly: for each day, per_day = ceil(remaining_exp / remaining_days)
+        remaining_days = total_days
         for day in plan.days:
-            day_recs = guide_experiences[
-                order : order + self.MAX_ACTIVITIES_PER_DAY
-            ]
+            if remaining_days <= 0:
+                break
+            remaining_exp = total_exp - order
+            per_day = 0
+            if remaining_exp > 0:
+                per_day = max(1, min(
+                    self.MAX_ACTIVITIES_PER_DAY,
+                    ceil(remaining_exp / remaining_days),
+                ))
+            day_recs = guide_experiences[order : order + per_day]
 
             if day_recs:
-                # Real experiences available for this day
                 for rec in day_recs:
                     stops.append(
                         TripStop(
@@ -284,7 +452,6 @@ class TripPlannerWorkflow:
                     order += 1
                     stop_index += 1
             else:
-                # No experiences left — insert a Free Day placeholder (Fix #2)
                 stops.append(
                     TripStop(
                         experience_id=None,
@@ -299,16 +466,17 @@ class TripPlannerWorkflow:
                 stop_index += 1
                 free_day_count += 1
 
-                        # ================= LOG FREE DAYS (Fix #5) =================
+            remaining_days -= 1
+
         if free_day_count > 0:
             self._log(
                 execution_log,
                 "Orchestrator",
                 f"Inserted {free_day_count} Free Day placeholder(s)",
-                status="WARNING" if free_day_count > len(guide_experiences) else "SUCCESS",
+                status="INFO",
                 details=(
-                    f"Only {len(guide_experiences)} experience(s) available for "
-                    f"{len(plan.days)} day(s) — remaining days marked as Free Days."
+                    f"Only {total_exp} experience(s) available for "
+                    f"{total_days} day(s) — remaining days marked as Free Days."
                 ),
             )
 
@@ -363,7 +531,7 @@ class TripPlannerWorkflow:
             stops=stops,
             winning_guide_id=winner_guide_id,
             winning_guide_name=winning_guide_name,
-            winning_guide_city=None,   # C# resolves city via LocalGuides
+            winning_guide_city=None,
             budget_valid=budget_result.valid,
             total_estimated_cost=budget_result.total_cost,
             approval_status=approval_result.status,
