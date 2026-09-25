@@ -17,7 +17,7 @@ class Settings:
     # ================= AI / LLM =================
     # Read from .env — do not hardcode keys in source.
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-    CHAT_MODEL: str = os.getenv("CHAT_MODEL", "gemini-2.5-flash-lite")
+    CHAT_MODEL: str = os.getenv("CHAT_MODEL", "gemini-3.5-flash-lite")
 
 
 settings = Settings()
