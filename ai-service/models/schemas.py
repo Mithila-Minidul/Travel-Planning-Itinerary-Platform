@@ -28,11 +28,13 @@ class DestinationWeather(BaseModel):
 class RecommendedExperience(BaseModel):
     experience_id: str
     title: str
-    guide_id: Optional[str] = None          # ✅ NEW — used by Orchestrator (One Guide rule)
+    guide_id: Optional[str] = None          # used by Orchestrator (One Guide rule)
     guide_name: str
     category: str
     calculated_price: float
     duration_hours: int
+    start_time: Optional[str] = None        # ✅ NEW — "HH:MM" (24h) for preferred-times filter
+    end_time: Optional[str] = None          # ✅ NEW
     weather_match_status: str
     recommendation_reason: str
 
