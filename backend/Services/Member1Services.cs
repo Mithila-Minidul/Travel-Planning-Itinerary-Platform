@@ -545,10 +545,18 @@ namespace Backend.Services
 
             var result = list.Select(e => MapToDto(e, targetDate)).ToList();
 
-            if (query.MaxBudget.HasValue)
-            {
-                result = result.Where(r => r.CurrentCalculatedPrice <= query.MaxBudget.Value).ToList();
-            }
+            // NOTE: We deliberately do NOT filter by query.MaxBudget here.
+            //
+            // The Research Agent's job is discovery — find every experience
+            // that matches the destination and category. Budget validation
+            // belongs to the Budget Agent in the Python orchestrator, which
+            // flags over-budget experiences as warnings the Travel Agent
+            // can review. Filtering here would silently hide valid
+            // experiences from the reviewer before they ever see them.
+            //
+            // The MaxBudget value is still passed to the Research Agent so
+            // the LLM (Phase D) can use it as context when ranking, but it
+            // is no longer a hard exclusion at the data layer.
 
             return result;
         }

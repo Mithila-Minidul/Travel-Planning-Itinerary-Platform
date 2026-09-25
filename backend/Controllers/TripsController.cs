@@ -340,6 +340,19 @@ namespace Backend.Controllers
                 trip.TravelAgentId = agentId;
             }
 
+            // ✅ Sync the AI workflow status so the AI Performance page
+            //    reflects the human decision, not just the AI's initial pause.
+            var workflow = await _context.AgentWorkflows
+                .Where(w => w.TripId == trip.Id)
+                .OrderByDescending(w => w.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (workflow != null)
+            {
+                workflow.Status = request.Status.ToUpperInvariant();   // APPROVED | REJECTED
+                workflow.CompletedAt = DateTime.UtcNow;
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"Trip successfully {request.Status}.", tripId = trip.Id });
