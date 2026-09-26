@@ -25,6 +25,7 @@ import AIPerformancePage from './pages/AIPerformancePage';
 import BookingsPage from './pages/BookingsPage';
 import PaymentDashboardPage from './pages/PaymentDashboardPage';
 import RefundManagementPage from './pages/RefundManagementPage';
+import BookingDetailPage from './pages/BookingDetailPage';
 
 function App() {
   return (
@@ -128,6 +129,11 @@ function App() {
             <Route path="/refunds" element={
               <ProtectedRoute allowedRoles={['Admin']}>
                 <RefundManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/bookings/:id" element={
+              <ProtectedRoute allowedRoles={['Admin', 'LocalGuide', 'Traveler']}>
+                <BookingDetailPage />
               </ProtectedRoute>
             } />
           </Route>
