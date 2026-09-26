@@ -17,38 +17,50 @@ namespace Backend.Services
         public BookingService(AppDbContext context) => _context = context;
 
         // ---------- Create ----------
-        public async Task<BookingResponseDto> CreateAsync(Guid travelerUserId, BookingCreateDto dto)
+                public async Task<BookingResponseDto> CreateAsync(Guid travelerUserId, BookingCreateDto dto)
         {
-            var tripStop = await _context.TripStops
-                .Include(s => s.Trip)
-                .Include(s => s.Experience)
-                .FirstOrDefaultAsync(s => s.Id == dto.TripStopId)
-                ?? throw new KeyNotFoundException("Trip stop not found.");
+            // Load the Trip with its stops (for experience + guide resolution)
+            var trip = await _context.Trips
+                .Include(t => t.TripStops).ThenInclude(s => s.Experience)
+                .FirstOrDefaultAsync(t => t.Id == dto.TripId)
+                ?? throw new KeyNotFoundException("Trip not found.");
 
-            if (tripStop.ExperienceId == null)
-                throw new InvalidOperationException("This trip stop has no bookable experience (Free Day).");
+            if (trip.TravelerId != travelerUserId)
+                throw new UnauthorizedAccessException("You can only book your own trips.");
 
-            if (tripStop.Trip.TravelerId != travelerUserId)
-                throw new UnauthorizedAccessException("You can only book stops from your own trips.");
+            if (trip.Status != "Approved")
+                throw new InvalidOperationException("Trip must be approved by a Travel Agent before booking.");
 
+            // Prevent duplicate active bookings
             var existing = await _context.Bookings
-                .FirstOrDefaultAsync(b => b.TripStopId == dto.TripStopId
-                                       && b.Status != "Cancelled");
+                .FirstOrDefaultAsync(b => b.TripId == trip.Id && b.Status != "Cancelled");
             if (existing != null)
-                throw new InvalidOperationException("This stop is already booked.");
+                throw new InvalidOperationException("This trip is already booked.");
 
-            var experience = tripStop.Experience!;
+            // Compute total from all real stops (skip Free Days)
+            var realStops = trip.TripStops
+                .Where(s => s.ExperienceId != null && s.Experience != null)
+                .ToList();
+
+            if (realStops.Count == 0)
+                throw new InvalidOperationException("This trip has no bookable experiences.");
+
+            // All stops belong to ONE guide (One Guide Per Trip rule)
+            var guideId = realStops[0].Experience!.GuideId;
+
+            var totalAmount = realStops.Sum(s =>
+                (s.Experience!.BasePrice) * dto.NumberOfGuests);
 
             var booking = new Booking
             {
-                TripId = tripStop.TripId,
-                TripStopId = tripStop.Id,
-                ExperienceId = experience.Id,
+                TripId = trip.Id,
+                TripStopId = realStops[0].Id,   // reference first real stop (nullable-friendly)
+                ExperienceId = realStops[0].ExperienceId!.Value,
                 TravelerId = travelerUserId,
-                GuideId = experience.GuideId,
+                GuideId = guideId,
                 NumberOfGuests = dto.NumberOfGuests,
                 BookingDate = dto.BookingDate,
-                TotalAmount = experience.BasePrice * dto.NumberOfGuests,
+                TotalAmount = totalAmount,
                 Status = "Pending",
                 ConfirmationCode = GenerateConfirmationCode(),
                 Notes = dto.Notes
