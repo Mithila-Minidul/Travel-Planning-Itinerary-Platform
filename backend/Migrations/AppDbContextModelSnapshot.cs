@@ -187,7 +187,7 @@ namespace backend.Migrations
                     b.Property<Guid>("TripId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("TripStopId")
+                    b.Property<Guid?>("TripStopId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -254,7 +254,7 @@ namespace backend.Migrations
                             IconName = "hiking",
                             IsActive = true,
                             Name = "Hiking",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4682)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9369)
                         },
                         new
                         {
@@ -264,7 +264,7 @@ namespace backend.Migrations
                             IconName = "tea",
                             IsActive = true,
                             Name = "Tea & Plantation",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4720)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9388)
                         },
                         new
                         {
@@ -274,7 +274,7 @@ namespace backend.Migrations
                             IconName = "temple",
                             IsActive = true,
                             Name = "Culture & Heritage",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4725)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9391)
                         },
                         new
                         {
@@ -284,7 +284,7 @@ namespace backend.Migrations
                             IconName = "beach",
                             IsActive = true,
                             Name = "Beach & Surfing",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4731)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9393)
                         },
                         new
                         {
@@ -294,7 +294,7 @@ namespace backend.Migrations
                             IconName = "wildlife",
                             IsActive = true,
                             Name = "Wildlife & Safari",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4734)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9396)
                         },
                         new
                         {
@@ -304,7 +304,7 @@ namespace backend.Migrations
                             IconName = "train",
                             IsActive = true,
                             Name = "Train Journeys",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4737)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9398)
                         },
                         new
                         {
@@ -314,7 +314,7 @@ namespace backend.Migrations
                             IconName = "nature",
                             IsActive = true,
                             Name = "Nature & Waterfalls",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4741)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9400)
                         },
                         new
                         {
@@ -324,7 +324,7 @@ namespace backend.Migrations
                             IconName = "food",
                             IsActive = true,
                             Name = "Food & Cooking",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4759)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9402)
                         },
                         new
                         {
@@ -334,7 +334,7 @@ namespace backend.Migrations
                             IconName = "festival",
                             IsActive = true,
                             Name = "Festivals & Events",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(4762)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9403)
                         });
                 });
 
@@ -414,7 +414,7 @@ namespace backend.Migrations
                             Longitude = 81.046599999999998,
                             Name = "Ella",
                             ProvinceState = "Uva Province",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(5009)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9466)
                         },
                         new
                         {
@@ -428,7 +428,7 @@ namespace backend.Migrations
                             Longitude = 80.633700000000005,
                             Name = "Kandy",
                             ProvinceState = "Central Province",
-                            UpdatedAt = new DateTime(2026, 9, 25, 15, 34, 37, 253, DateTimeKind.Utc).AddTicks(5016)
+                            UpdatedAt = new DateTime(2026, 9, 26, 4, 18, 48, 206, DateTimeKind.Utc).AddTicks(9470)
                         });
                 });
 
@@ -900,7 +900,7 @@ namespace backend.Migrations
                             Email = "admin@travelapp.com",
                             FullName = "System Administrator",
                             IsActive = true,
-                            PasswordHash = "$2a$11$NnTdzwJyfbQEYgZzgJaqFOB8siSmOCSsUfuJCC.PxCtZFoXPWncNm",
+                            PasswordHash = "$2a$11$TRKfxWWRseOVUPHoMsSF3eVJf8LMYOfuw9a8YFKSd52c0M7DWElRG",
                             PhoneNumber = "+94770000000",
                             Role = "Admin",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
@@ -958,8 +958,7 @@ namespace backend.Migrations
                     b.HasOne("Backend.Models.TripStop", "TripStop")
                         .WithMany()
                         .HasForeignKey("TripStopId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Experience");
 
