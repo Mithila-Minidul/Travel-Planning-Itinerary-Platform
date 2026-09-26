@@ -82,6 +82,21 @@ namespace Backend.Controllers
             catch (UnauthorizedAccessException) { return Forbid(); }
             catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
         }
+                // ============================================================
+        // PATCH: api/Bookings/{id}/reject   (Guide)
+        // ============================================================
+        [Authorize(Roles = "LocalGuide")]
+        [HttpPatch("{id:guid}/reject")]
+        public async Task<IActionResult> Reject(Guid id, [FromBody] BookingCancelDto dto)
+        {
+            try
+            {
+                return Ok(await _bookings.RejectAsync(id, UserId, dto?.Reason));
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+            catch (UnauthorizedAccessException) { return Forbid(); }
+            catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        }
 
         // ============================================================
         // PATCH: api/Bookings/{id}/cancel   (Traveler or Admin)
