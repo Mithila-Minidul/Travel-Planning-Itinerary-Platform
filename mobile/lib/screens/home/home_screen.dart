@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../destinations/destination_browse_screen.dart';
 import '../trips/trip_list_screen.dart';
+import '../bookings/booking_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const DestinationBrowseScreen(), // Browse
       const TripListScreen(), // ✅ Real Trip List
       _buildDashboard(context, user), // Home Dashboard
-      _buildComingSoon('My Bookings', Icons.confirmation_number_outlined), // Bookings
+      const BookingListScreen(), // Bookings
       _buildProfile(context, user), // Profile
     ];
 
