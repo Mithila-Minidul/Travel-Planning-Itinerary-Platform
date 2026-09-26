@@ -111,7 +111,7 @@ namespace Backend.Data
                 entity.HasOne(b => b.TripStop)
                       .WithMany()
                       .HasForeignKey(b => b.TripStopId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                      .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasOne(b => b.Experience)
                       .WithMany()
