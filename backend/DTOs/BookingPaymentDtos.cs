@@ -7,7 +7,7 @@ namespace Backend.DTOs
 
     public class BookingCreateDto
     {
-        public Guid TripStopId { get; set; }
+        public Guid TripId { get; set; }        // ← trip-level booking
         public int NumberOfGuests { get; set; } = 1;
         public DateTime BookingDate { get; set; }
         public string? Notes { get; set; }
@@ -18,7 +18,7 @@ namespace Backend.DTOs
         public Guid Id { get; set; }
         public Guid TripId { get; set; }
         public string TripTitle { get; set; } = "";
-        public Guid TripStopId { get; set; }
+        public Guid? TripStopId { get; set; }
         public Guid ExperienceId { get; set; }
         public string ExperienceTitle { get; set; } = "";
         public string DestinationName { get; set; } = "";
