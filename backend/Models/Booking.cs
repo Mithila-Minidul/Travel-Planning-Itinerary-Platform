@@ -15,9 +15,9 @@ namespace Backend.Models
         public Guid TripId { get; set; }
         public Trip Trip { get; set; } = null!;
 
-        [Required]
-        public Guid TripStopId { get; set; }
-        public TripStop TripStop { get; set; } = null!;
+        // Nullable — bookings are trip-level. Kept for backward compat.
+        public Guid? TripStopId { get; set; }
+        public TripStop? TripStop { get; set; }
 
         [Required]
         public Guid ExperienceId { get; set; }
