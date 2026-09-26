@@ -46,17 +46,7 @@ class _ResearchVerdict(BaseModel):
 
 class ResearchAgent:
     """
-    Member 1 Agent: Researches experiences and evaluates weather
-    suitability.
-
-    Deterministic steps (never delegated):
-        - Call weather tool for the destination
-        - Call C# search tool for matching experiences
-
-    LLM role (Phase D):
-        - Judge weather suitability per experience
-        - Produce a personalised recommendation reason per experience
-        - Summarise the destination's weather at a glance
+    Member 1 Agent: Researches experiences and evaluates weather suitability.
     """
 
     def __init__(self):
@@ -91,7 +81,6 @@ class ResearchAgent:
         try:
             verdicts = await self._llm_verdicts(weather_info, experiences)
 
-            # Build the final list — attach LLM text to each experience
             verdict_by_id = {v.experience_id: v for v in verdicts.verdicts}
             recommendations: List[RecommendedExperience] = []
 
@@ -103,7 +92,6 @@ class ResearchAgent:
                     status = v.weather_match_status or "OPTIMAL"
                     reason = v.reason or self._fallback_reason(exp, weather_info)
                 else:
-                    # LLM skipped this one — fall back to deterministic
                     status = self._fallback_status(exp, weather_info)
                     reason = self._fallback_reason(exp, weather_info)
 
@@ -118,6 +106,7 @@ class ResearchAgent:
                         duration_hours=int(exp.get("durationHours", 0)),
                         start_time=exp.get("startTime"),
                         end_time=exp.get("endTime"),
+                        max_capacity=exp.get("maxCapacity"),   # ✅ NEW
                         weather_match_status=status,
                         recommendation_reason=reason,
                     )
@@ -138,7 +127,6 @@ class ResearchAgent:
             )
 
         except Exception as e:
-            # Fallback: deterministic logic if the LLM call fails
             recommendations = [self._fallback_recommendation(exp, weather_info)
                                for exp in experiences]
             summary = self._fallback_summary(
@@ -233,6 +221,7 @@ class ResearchAgent:
             duration_hours=int(exp.get("durationHours", 0)),
             start_time=exp.get("startTime"),
             end_time=exp.get("endTime"),
+            max_capacity=exp.get("maxCapacity"),   # ✅ NEW
             weather_match_status=self._fallback_status(exp, weather_info),
             recommendation_reason=self._fallback_reason(exp, weather_info),
         )
