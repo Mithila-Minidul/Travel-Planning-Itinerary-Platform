@@ -33,8 +33,9 @@ class RecommendedExperience(BaseModel):
     category: str
     calculated_price: float
     duration_hours: int
-    start_time: Optional[str] = None        # ✅ NEW — "HH:MM" (24h) for preferred-times filter
-    end_time: Optional[str] = None          # ✅ NEW
+    start_time: Optional[str] = None        # "HH:MM" (24h) for preferred-times filter
+    end_time: Optional[str] = None
+    max_capacity: Optional[int] = None      # ✅ NEW — used by Capacity filter
     weather_match_status: str
     recommendation_reason: str
 
