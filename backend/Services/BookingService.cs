@@ -48,8 +48,10 @@ namespace Backend.Services
             // All stops belong to ONE guide (One Guide Per Trip rule)
             var guideId = realStops[0].Experience!.GuideId;
 
+            // Use the trip-stop snapshot price (what the traveler saw on the
+            // trip detail page) — NOT the static Experience.BasePrice.
             var totalAmount = realStops.Sum(s =>
-                (s.Experience!.BasePrice) * dto.NumberOfGuests);
+                s.EstimatedCost * dto.NumberOfGuests);
 
             var booking = new Booking
             {
@@ -121,6 +123,31 @@ namespace Backend.Services
                 throw new InvalidOperationException($"Booking already {booking.Status}.");
 
             booking.Status = "Confirmed";
+            await _context.SaveChangesAsync();
+            return await MapAsync(id);
+        }
+                // ---------- Guide rejects ----------
+        public async Task<BookingResponseDto> RejectAsync(Guid id, Guid guideUserId, string? reason)
+        {
+            var guide = await _context.LocalGuides
+                .FirstOrDefaultAsync(g => g.UserId == guideUserId)
+                ?? throw new KeyNotFoundException("Guide profile not found.");
+
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id)
+                ?? throw new KeyNotFoundException("Booking not found.");
+
+            if (booking.GuideId != guide.Id)
+                throw new UnauthorizedAccessException("Not your booking.");
+
+            if (booking.Status != "Pending")
+                throw new InvalidOperationException($"Booking already {booking.Status}.");
+
+            booking.Status = "Cancelled";
+            booking.CancelledAt = DateTime.UtcNow;
+            booking.CancellationReason = string.IsNullOrWhiteSpace(reason)
+                ? "Rejected by guide."
+                : $"Rejected by guide: {reason.Trim()}";
+
             await _context.SaveChangesAsync();
             return await MapAsync(id);
         }
