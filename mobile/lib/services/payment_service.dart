@@ -54,4 +54,20 @@ class PaymentService {
       return 'Request failed';
     }
   }
+    // ================= INITIATE PAYHERE =================
+  static Future<Map<String, dynamic>> initiatePayHere(String bookingId) async {
+    final token = await _getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/Payments/initiate-payhere/$bookingId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    final err = _tryParseError(response.body);
+    throw Exception(err);
+  }
 }
