@@ -198,7 +198,7 @@ namespace Backend.Services
                 ?? throw new KeyNotFoundException("Booking not found.");
 
             if (booking.ConfirmationCode != confirmationCode)
-                throw new UnauthorizedAccessException("Invalid confirmation code.");
+                throw new InvalidOperationException("Invalid confirmation code.");
 
             if (booking.Status != "Confirmed")
                 throw new InvalidOperationException($"Cannot check in — booking is {booking.Status}.");
