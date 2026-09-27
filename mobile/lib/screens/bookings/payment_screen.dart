@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/booking_service.dart';
 import '../../services/payment_service.dart';
+import 'package:payhere_mobilesdk_flutter/payhere_mobilesdk_flutter.dart';
 
 class PaymentScreen extends StatefulWidget {
   final String bookingId;
@@ -14,7 +15,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Map<String, dynamic>? _booking;
   bool _loading = true;
   bool _busy = false;
-  String _method = 'Mock';
+  String _method = 'PayHere';
 
   @override
   void initState() {
@@ -36,34 +37,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  Future<void> _pay() async {
+    Future<void> _pay() async {
+    if (_method == 'PayHere') {
+      await _payWithPayHere();
+      return;
+    }
+    // Mock path (fallback for offline demos)
     setState(() => _busy = true);
     try {
       await PaymentService.processPayment(widget.bookingId, method: _method);
       if (!mounted) return;
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 8),
-              Text('Payment Successful'),
-            ],
-          ),
-          content: const Text(
-            'Your payment has been processed. Show your QR code at the trip location for check-in.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
+      await _showSuccessDialog();
       if (!mounted) return;
       Navigator.pop(context, true);
     } catch (e) {
@@ -74,6 +58,90 @@ class _PaymentScreenState extends State<PaymentScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _payWithPayHere() async {
+    setState(() => _busy = true);
+    try {
+      final payload = await PaymentService.initiatePayHere(widget.bookingId);
+
+      final Map<String, dynamic> sdkPayload = {
+        'sandbox': payload['sandbox'] == 'true' || payload['sandbox'] == true,
+        'merchant_id': payload['merchant_id'],
+        'return_url': payload['return_url'],
+        'cancel_url': payload['cancel_url'],
+        'notify_url': payload['notify_url'],
+        'order_id': payload['order_id'],
+        'items': payload['items'],
+        'currency': payload['currency'],
+        'amount': payload['amount'],
+        'hash': payload['hash'],
+        'first_name': payload['first_name'],
+        'last_name': payload['last_name'],
+        'email': payload['email'],
+        'phone': payload['phone'],
+        'address': payload['address'],
+        'city': payload['city'],
+        'country': payload['country'],
+      };
+
+      if (!mounted) return;
+      setState(() => _busy = false);
+
+      PayHere.startPayment(
+        sdkPayload,
+        (paymentId) async {
+          if (!mounted) return;
+          await _showSuccessDialog();
+          if (!mounted) return;
+          Navigator.pop(context, true);
+        },
+        (error) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Payment failed: $error')),
+          );
+        },
+        () {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Payment window dismissed.')),
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _showSuccessDialog() {
+    return showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Payment Successful'),
+          ],
+        ),
+        content: const Text(
+          'Your payment has been processed. Show your QR code at the trip location for check-in.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -171,9 +239,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 10),
-        _methodTile('Mock', 'Demo Card (Mock)', Icons.credit_card),
+        _methodTile('PayHere', 'PayHere (Card / Wallet)', Icons.credit_card),
         const SizedBox(height: 8),
-        _methodTile('Cash', 'Cash on Arrival', Icons.payments_outlined),
+        _methodTile('Mock', 'Demo Card (Mock)', Icons.science_outlined),
         const SizedBox(height: 24),
 
         // Pay button
@@ -209,10 +277,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        const Center(
+        Center(
           child: Text(
-            '🔒 Demo payment. No real charge.',
-            style: TextStyle(fontSize: 11, color: Colors.grey),
+            _method == 'PayHere'
+                ? '🔒 Secure checkout via PayHere (Sandbox)'
+                : '🧪 Demo mode — no real charge.',
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
           ),
         ),
       ],
