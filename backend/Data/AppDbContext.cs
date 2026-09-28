@@ -19,6 +19,8 @@ namespace Backend.Data
         public DbSet<TripStop> TripStops => Set<TripStop>();
         public DbSet<AgentWorkflow> AgentWorkflows => Set<AgentWorkflow>();
         public DbSet<AgentExecutionLog> AgentExecutionLogs => Set<AgentExecutionLog>();
+        public DbSet<Booking> Bookings => Set<Booking>();
+        public DbSet<Payment> Payments => Set<Payment>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -94,6 +96,48 @@ namespace Backend.Data
                       .WithMany()
                       .HasForeignKey(s => s.ExperienceId)
                       .OnDelete(DeleteBehavior.SetNull);
+            });
+
+                        // ---------- BOOKING ----------
+            modelBuilder.Entity<Booking>(entity =>
+            {
+                entity.HasIndex(b => b.ConfirmationCode).IsUnique();
+
+                entity.HasOne(b => b.Trip)
+                      .WithMany()
+                      .HasForeignKey(b => b.TripId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(b => b.TripStop)
+                      .WithMany()
+                      .HasForeignKey(b => b.TripStopId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(b => b.Experience)
+                      .WithMany()
+                      .HasForeignKey(b => b.ExperienceId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(b => b.Traveler)
+                      .WithMany()
+                      .HasForeignKey(b => b.TravelerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(b => b.Guide)
+                      .WithMany()
+                      .HasForeignKey(b => b.GuideId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ---------- PAYMENT ----------
+            modelBuilder.Entity<Payment>(entity =>
+            {
+                entity.HasIndex(p => p.BookingId).IsUnique();
+
+                entity.HasOne(p => p.Booking)
+                      .WithOne(b => b.Payment)
+                      .HasForeignKey<Payment>(p => p.BookingId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
             // ---------- AGENT WORKFLOW ----------

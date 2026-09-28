@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/trip_service.dart';
 import '../../widgets/ai_progress_widget.dart';
+import '../../services/booking_service.dart';
+import '../bookings/booking_list_screen.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final String tripId;
@@ -13,6 +15,7 @@ class TripDetailScreen extends StatefulWidget {
 class _TripDetailScreenState extends State<TripDetailScreen> {
   Map<String, dynamic>? _trip;
   bool _loading = true;
+  bool _bookingBusy = false;
   String? _error;
 
   @override
@@ -33,6 +36,97 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       setState(() => _error = e.toString());
     } finally {
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _bookTrip() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Book This Trip?'),
+        content: Text(
+          'Total: \$${((_trip?['totalEstimatedCost'] ?? 0) as num).toDouble().toStringAsFixed(2)}\n\n'
+          'This will send a booking request to your local guide for the whole trip.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Book Now',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() => _bookingBusy = true);
+    try {
+      final startDate = DateTime.tryParse(_trip?['startDate'] ?? '') ??
+          DateTime.now().add(const Duration(days: 7));
+      final guests = (_trip?['numberOfTravelers'] ?? 1) as int;
+
+      await BookingService.createBooking(
+        tripId: widget.tripId,
+        numberOfGuests: guests < 1 ? 1 : guests,
+        bookingDate: startDate,
+        notes: _trip?['specialRequests'],
+      );
+
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Booking Created'),
+            ],
+          ),
+          content: const Text(
+            'Your booking request has been sent to the guide. '
+            'You will be notified once it is confirmed.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const BookingListScreen()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _bookingBusy = false);
     }
   }
 
@@ -177,11 +271,15 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         if ((trip['guideName'] ?? '').toString().isNotEmpty)
           _buildGuideCard(trip),
 
-        // ================= ✅ NEW: TRIP PREFERENCES =================
+        // ================= TRIP PREFERENCES =================
         _buildPreferencesCard(trip),
 
         // ================= AI PROGRESS WIDGET =================
         AiProgressWidget(status: (trip['status'] ?? 'Pending').toString()),
+        const SizedBox(height: 16),
+
+        // ================= BOOK NOW BUTTON =================
+        _buildBookNowButton(trip),
         const SizedBox(height: 16),
 
         // ================= ITINERARY =================
@@ -190,6 +288,54 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
+
+        // AI warning banner — appears only when the trip has errors
+        if ((trip['aiErrors'] ?? '').toString().isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.shade300, width: 1.5),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.orange.shade800,
+                  size: 26,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AI could not build a full itinerary',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange.shade900,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        trip['aiErrors'].toString(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange.shade900,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         if (sortedDays.isEmpty)
           Container(
             padding: const EdgeInsets.all(24),
@@ -234,7 +380,99 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     );
   }
 
-  // ✅ NEW: Trip Preferences Card
+  // ================= BOOK NOW BUTTON =================
+  // Disabled until the Travel Agent approves the trip.
+  // Becomes active and functional once status == 'Approved'.
+  Widget _buildBookNowButton(dynamic trip) {
+    final status = (trip['status'] ?? 'Pending').toString();
+    final isApproved = status == 'Approved';
+    final isRejected = status == 'Rejected';
+    final stops = (trip['tripStops'] as List<dynamic>? ?? []);
+    final hasStops = stops.any((s) => s['experienceId'] != null);
+    final canBook = isApproved && hasStops;
+
+    // -------- Choose colors & label per state --------
+    Color bg;
+    Color fg;
+    IconData icon;
+    String label;
+    String? subtitle;
+
+    if (isRejected) {
+      bg = Colors.grey.shade300;
+      fg = Colors.grey.shade600;
+      icon = Icons.block;
+      label = 'Trip Rejected';
+      subtitle = 'The Travel Agent rejected this itinerary.';
+    } else if (status == 'Pending') {
+      bg = Colors.grey.shade300;
+      fg = Colors.grey.shade600;
+      icon = Icons.lock_clock;
+      label = 'Awaiting Approval';
+      subtitle = 'Book Now unlocks when a Travel Agent approves.';
+    } else if (isApproved && !hasStops) {
+      bg = Colors.grey.shade300;
+      fg = Colors.grey.shade600;
+      icon = Icons.error_outline;
+      label = 'Nothing to Book';
+      subtitle = 'This trip has no bookable experiences.';
+    } else {
+      bg = const Color(0xFF4F46E5);
+      fg = Colors.white;
+      icon = Icons.shopping_cart_checkout;
+      label = 'Book This Trip';
+      subtitle = null;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ElevatedButton.icon(
+          onPressed: canBook && !_bookingBusy ? _bookTrip : null,
+          icon: _bookingBusy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Icon(icon),
+          label: Text(
+            _bookingBusy ? 'Booking...' : label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: bg,
+            foregroundColor: fg,
+            disabledBackgroundColor: bg,
+            disabledForegroundColor: fg,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // Trip Preferences Card
   Widget _buildPreferencesCard(dynamic trip) {
     final travelGroup = (trip['travelGroup'] ?? '').toString();
     final numberOfTravelers = trip['numberOfTravelers'] ?? 1;

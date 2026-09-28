@@ -54,6 +54,11 @@ namespace Backend.Models
         [MaxLength(1000)]
         public string? SpecialRequests { get; set; }
 
+        // AI workflow errors from the last run (comma-separated).
+        // Null/empty means the itinerary was built cleanly.
+        [MaxLength(2000)]
+        public string? AiErrors { get; set; }
+
         // ============================================================
 
         // Status: Pending, Approved, Rejected, Confirmed, Completed, Cancelled
