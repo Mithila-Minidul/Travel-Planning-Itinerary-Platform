@@ -75,7 +75,9 @@ namespace Backend.Controllers
                     TravelPace = t.TravelPace,
                     PreferredTimes = t.PreferredTimes,
                     SpecialRequests = t.SpecialRequests,
-                    TotalEstimatedCost = t.TripStops.Sum(s => s.EstimatedCost),
+                    AiErrors = t.AiErrors,
+                    TotalEstimatedCost = t.TripStops.Sum(s => s.EstimatedCost)
+                        * (t.NumberOfTravelers <= 0 ? 1 : t.NumberOfTravelers),
                     CreatedAt = t.CreatedAt,
                     UpdatedAt = t.UpdatedAt,
                     TripStops = t.TripStops.Select(s => new TripStopDto
@@ -97,7 +99,7 @@ namespace Backend.Controllers
         // ============================================================
         // GET: api/Trips/{id}
         // ============================================================
-        [Authorize(Roles = "Admin, TravelAgent, Traveler")]
+        [Authorize(Roles = "Admin, TravelAgent, Traveler, LocalGuide")]
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetTripById(Guid id)
         {
@@ -116,6 +118,19 @@ namespace Backend.Controllers
 
             if (userRole == "Traveler" && trip.TravelerId.ToString() != userIdClaim)
                 return Forbid();
+
+            // ✅ LocalGuide can only see trips assigned to them
+            if (userRole == "LocalGuide")
+            {
+                if (!Guid.TryParse(userIdClaim, out var guideUserId))
+                    return Forbid();
+
+                var guide = await _context.LocalGuides
+                    .FirstOrDefaultAsync(g => g.UserId == guideUserId);
+
+                if (guide == null || trip.GuideId != guide.Id)
+                    return Forbid();
+            }
 
             var dto = new TripResponseDto
             {
@@ -140,7 +155,9 @@ namespace Backend.Controllers
                 TravelPace = trip.TravelPace,
                 PreferredTimes = trip.PreferredTimes,
                 SpecialRequests = trip.SpecialRequests,
-                TotalEstimatedCost = trip.TripStops.Sum(s => s.EstimatedCost),
+                AiErrors = trip.AiErrors,
+                TotalEstimatedCost = trip.TripStops.Sum(s => s.EstimatedCost)
+                    * (trip.NumberOfTravelers <= 0 ? 1 : trip.NumberOfTravelers),
                 CreatedAt = trip.CreatedAt,
                 UpdatedAt = trip.UpdatedAt,
                 TripStops = trip.TripStops
@@ -228,7 +245,10 @@ namespace Backend.Controllers
                 BudgetTier = request.BudgetTier,
                 TravelPace = request.TravelPace,
                 PreferredTimes = request.PreferredTimes,
-                SpecialRequests = request.SpecialRequests
+                SpecialRequests = request.SpecialRequests,
+                AiErrors = (plannerResult.Errors != null && plannerResult.Errors.Count > 0)
+                    ? string.Join(" | ", plannerResult.Errors)
+                    : null
             };
 
             // ---- Build AgentWorkflow + AgentExecutionLogs ----

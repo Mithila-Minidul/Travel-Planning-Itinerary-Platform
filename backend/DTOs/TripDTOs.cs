@@ -108,7 +108,7 @@ namespace Backend.DTOs
         public string? TravelPace { get; set; }
         public string? PreferredTimes { get; set; }
         public string? SpecialRequests { get; set; }
-
+        public string? AiErrors { get; set; }
         public decimal TotalEstimatedCost { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

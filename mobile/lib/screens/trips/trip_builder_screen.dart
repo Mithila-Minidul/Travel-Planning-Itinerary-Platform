@@ -170,20 +170,31 @@ class _TripBuilderScreenState extends State<TripBuilderScreen> {
 
       if (!mounted) return;
 
+      final stopsCount = (result['stopsGenerated'] ?? 0) as int;
+      final hasItinerary = stopsCount > 0;
+
       await showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 8),
-              Text('Trip Created!'),
+              Icon(
+                hasItinerary ? Icons.check_circle : Icons.info_outline,
+                color: hasItinerary ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              const Text('Trip Created!'),
             ],
           ),
           content: Text(
-            'Your AI itinerary with ${result['stopsGenerated']} stops has been generated.\n\n'
-            'It is now pending Travel Agent approval.',
+            hasItinerary
+                ? 'Your AI itinerary is ready.\n\n'
+                  'It is now pending Travel Agent approval.'
+                : 'Your trip has been submitted.\n\n'
+                  'The AI could not find matching experiences for your '
+                  'budget and preferences. A Travel Agent will review your '
+                  'request shortly.',
           ),
           actions: [
             TextButton(
