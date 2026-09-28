@@ -17,5 +17,6 @@ namespace Backend.Interfaces
         Task<BookingResponseDto> CancelAsync(Guid id, Guid userId, string role, string? reason);
         Task<BookingResponseDto> CheckInAsync(Guid id, string confirmationCode);
         Task<BookingResponseDto> CheckInByCodeAsync(string confirmationCode);
+        Task<decimal> GetTotalEarningsAsync(Guid guideUserId);
     }
 }

@@ -11,4 +11,5 @@ export const bookingAPI = {
     apiClient.patch(`/Bookings/${id}/check-in`, null, { params: { code } }),
   checkInByCode: (confirmationCode) =>
     apiClient.post('/Bookings/check-in-by-code', { confirmationCode }),
+  getEarnings: () => apiClient.get('/Bookings/earnings'), // 👈 ADD THIS
 };

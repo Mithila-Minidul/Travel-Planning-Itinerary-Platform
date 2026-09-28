@@ -16,17 +16,20 @@ const GuideDashboard = () => {
   const { user } = useAuth();
   const [guideExperiences, setGuideExperiences] = useState([]);
   const [guideBookings, setGuideBookings] = useState([]);
+  const [totalEarnings, setTotalEarnings] = useState(0); // 👈 ADD THIS
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [expRes, bkRes] = await Promise.all([
+        const [expRes, bkRes, earnRes] = await Promise.all([
           experienceAPI.getMine(),
           bookingAPI.getAll(),
+          bookingAPI.getEarnings(), // 👈 ADD THIS
         ]);
         setGuideExperiences(expRes.data || []);
         setGuideBookings(bkRes.data || []);
+        setTotalEarnings(Number(earnRes.data.totalEarnings) || 0); // 👈 ADD THIS
       } catch (error) {
         console.error('Error fetching guide stats:', error);
       } finally {
@@ -57,7 +60,7 @@ const GuideDashboard = () => {
     { label: 'Approved Experiences', value: approvedExperiences, icon: <CheckCircle />, color: 'bg-indigo-600' },
     { label: 'Pending Experiences', value: pendingExperiences, icon: <PendingActions />, color: 'bg-amber-500' },
     { label: 'Pending Bookings', value: pendingBookings, icon: <CalendarToday />, color: 'bg-amber-500' },
-    { label: 'Total Earnings', value: '$0', icon: <AttachMoney />, color: 'bg-emerald-600' },
+    { label: 'Total Earnings', value: `$${totalEarnings.toFixed(2)}`, icon: <AttachMoney />, color: 'bg-emerald-600' }, // 👈 ADD THIS
     { label: 'Avg Rating', value: averageRating.toFixed(1), icon: <Star />, color: 'bg-yellow-500' },
   ];
 

@@ -144,6 +144,24 @@ namespace Backend.Controllers
             catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
             catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
         }
+
+        // ============================================================ // 👈 ADD THIS BLOCK
+        // GET: api/Bookings/earnings   (Guide's total earnings)
+        // ============================================================
+        [Authorize(Roles = "LocalGuide")]
+        [HttpGet("earnings")]
+        public async Task<IActionResult> GetTotalEarnings()
+        {
+            try
+            {
+                var total = await _bookings.GetTotalEarningsAsync(UserId);
+                return Ok(new { totalEarnings = total });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 
     public class CheckInByCodeDto

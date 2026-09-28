@@ -218,6 +218,24 @@ namespace Backend.Services
             return await CheckInAsync(booking.Id, confirmationCode);
         }
 
+        // ---------- Total Earnings ---------- // 👈 ADD THIS BLOCK
+        public async Task<decimal> GetTotalEarningsAsync(Guid guideUserId)
+        {
+            // 1. Find the guide profile using the logged-in UserId
+            var guide = await _context.LocalGuides
+                .FirstOrDefaultAsync(g => g.UserId == guideUserId);
+
+            if (guide == null) return 0m;
+
+            // 2. Sum up the successful payments minus any refunds
+            var totalEarnings = await _context.Payments
+                .Where(p => p.Booking.GuideId == guide.Id &&
+                           (p.Status == "Succeeded" || p.Status == "PartiallyRefunded" || p.Status == "Refunded"))
+                .SumAsync(p => p.Amount - (p.RefundAmount ?? 0m));
+
+            return totalEarnings;
+        }
+
         // ---------- Helpers ----------
         private IQueryable<Booking> Query() => _context.Bookings
             .Include(b => b.Trip)
