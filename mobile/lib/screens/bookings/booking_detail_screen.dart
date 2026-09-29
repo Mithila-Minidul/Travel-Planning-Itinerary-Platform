@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../services/booking_service.dart';
+import '../../screens/destinations/experience_detail_screen.dart';
+import '../../services/trip_service.dart';
 import 'payment_screen.dart';
 
 class BookingDetailScreen extends StatefulWidget {
@@ -111,6 +113,71 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     if (updated == true) _load();
   }
 
+  // 👇 CORRECTLY PLACED INSIDE THE CLASS
+  Future<void> _showReviewSelection() async {
+    try {
+      final trip = await TripService.getTripById(_booking!['tripId']);
+      final stops = (trip['tripStops'] as List)
+          .where((s) => s['experienceId'] != null)
+          .toList();
+
+      if (!mounted) return;
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Select an Experience to Review',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('You can only review experiences you have completed.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 16),
+              ...stops.map((stop) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.rate_review, color: Colors.indigo),
+                    ),
+                    title: Text(stop['title'] ?? 'Experience'),
+                    subtitle: Text(stop['location'] ?? ''),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ExperienceDetailScreen(
+                            experienceId: stop['experienceId'],
+                            showReviewPrompt: true,
+                            bookingId: widget.bookingId,
+                          ),
+                        ),
+                      );
+                    },
+                  )),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load trip experiences: $e')),
+      );
+    }
+  }
+
   Color _statusColor(String s) {
     switch (s) {
       case 'Pending':
@@ -166,7 +233,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // -------- HEADER --------
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -224,8 +290,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 ],
               ),
               const SizedBox(height: 14),
-
-              // Stats grid
               Row(
                 children: [
                   _statTile(Icons.person, 'Guide',
@@ -262,7 +326,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         ),
         const SizedBox(height: 16),
 
-        // -------- QR CODE --------
         if (canShowQr)
           Container(
             padding: const EdgeInsets.all(16),
@@ -329,7 +392,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           ),
         if (canShowQr) const SizedBox(height: 16),
 
-        // -------- STATUS BANNER --------
         if (status == 'Pending')
           _infoBox(
             Icons.hourglass_empty,
@@ -367,7 +429,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           ),
         const SizedBox(height: 12),
 
-        // -------- REFUND INFO --------
         if (b['refundAmount'] != null && b['refundPercentage'] != null)
           Container(
             padding: const EdgeInsets.all(14),
@@ -406,7 +467,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           ),
         const SizedBox(height: 16),
 
-        // -------- NOTES --------
         if ((b['notes'] ?? '').toString().isNotEmpty) ...[
           Container(
             padding: const EdgeInsets.all(14),
@@ -450,6 +510,27 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             ),
           ),
         if (canPay) const SizedBox(height: 10),
+        
+        // 👇 ADDED: Review the Trip Button
+        if (status == 'Completed')
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _busy ? null : _showReviewSelection,
+              icon: const Icon(Icons.rate_review),
+              label: const Text('Review the Trip'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        if (status == 'Completed') const SizedBox(height: 10),
+
         if (canCancel)
           SizedBox(
             width: double.infinity,

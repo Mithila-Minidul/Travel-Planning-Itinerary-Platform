@@ -14,7 +14,9 @@ class ApiConstants {
   static const String destinations = '/Destinations';
   static const String experiences = '/Experiences';
   static const String categories = '/Categories';
-  static const String imageUpload = '/Image/upload';
+  static const String imageUpload = '/Image/upload/profile-photos';
+  static const String updateProfile = '/Auth/profile';
+  static const String changePassword = '/Auth/change-password';
 }
 
 class StorageKeys {

@@ -50,4 +50,47 @@ class AuthService {
   static Future<void> logout() async {
     await SecureStorage.clearAll();
   }
+    // Update profile (name, phone)
+    static Future<User> updateProfile({
+    required String fullName,
+    String? phoneNumber,
+    String? profileImageUrl, // 👈 ADDED
+  }) async {
+    final response = await ApiClient.put(ApiConstants.updateProfile, {
+      'fullName': fullName.trim(),
+      'phoneNumber': phoneNumber,
+      'profileImageUrl': profileImageUrl, // 👈 ADDED
+    });
+
+    final currentUser = await getCurrentUser();
+    if (currentUser != null) {
+      final updated = User(
+        id: currentUser.id,
+        fullName: response['fullName'] ?? currentUser.fullName,
+        email: currentUser.email,
+        phoneNumber: response['phoneNumber'] ?? currentUser.phoneNumber,
+        profileImageUrl: response['profileImageUrl'] ?? currentUser.profileImageUrl, // 👈 UPDATED
+        agencyName: currentUser.agencyName,
+        agentLicenseNumber: currentUser.agentLicenseNumber,
+        role: currentUser.role,
+        isActive: currentUser.isActive,
+        guideId: currentUser.guideId,
+        guideStatus: currentUser.guideStatus,
+      );
+      await SecureStorage.saveUser(json.encode(updated.toJson()));
+      return updated;
+    }
+    return User.fromJson(response);
+  }
+
+  // Change password
+  static Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    await ApiClient.post(ApiConstants.changePassword, {
+      'oldPassword': oldPassword,
+      'newPassword': newPassword,
+    });
+  }
 }

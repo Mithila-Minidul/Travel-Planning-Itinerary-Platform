@@ -9,5 +9,7 @@ namespace Backend.Interfaces
         Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request);
         Task<AuthResponseDto> LoginAsync(LoginRequestDto request);
         Task<UserProfileDto> GetCurrentUserAsync(Guid userId);
+        Task<object> UpdateProfileAsync(Guid userId, UpdateProfileDto dto);
+        Task ChangePasswordAsync(Guid userId, ChangePasswordDto dto);
     }
 }

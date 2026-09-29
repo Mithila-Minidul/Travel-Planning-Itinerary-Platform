@@ -21,6 +21,7 @@ namespace Backend.Data
         public DbSet<AgentExecutionLog> AgentExecutionLogs => Set<AgentExecutionLog>();
         public DbSet<Booking> Bookings => Set<Booking>();
         public DbSet<Payment> Payments => Set<Payment>();
+        public DbSet<Review> Reviews => Set<Review>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -161,6 +162,25 @@ namespace Backend.Data
 
                 entity.HasIndex(l => l.AgentWorkflowId);
             });
+
+            // ---------- REVIEW ----------
+        modelBuilder.Entity<Review>(entity =>
+        {
+            entity.HasOne(r => r.Booking)
+                .WithMany()
+                .HasForeignKey(r => r.BookingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.Experience)
+                .WithMany()
+                .HasForeignKey(r => r.ExperienceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.Traveler)
+                .WithMany()
+                .HasForeignKey(r => r.TravelerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
             SeedInitialData(modelBuilder);
         }
