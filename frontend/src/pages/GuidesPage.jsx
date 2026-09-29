@@ -6,6 +6,7 @@ import { Verified, Person, Check, Close, Email, Phone, LocationOn, Badge } from 
 const GuidesPage = () => {
   const [guides, setGuides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('All');
   const { isAdmin } = useAuth();
 
   useEffect(() => {
@@ -38,6 +39,15 @@ const GuidesPage = () => {
 
   const pendingGuides = guides.filter(g => g.status === 'Pending');
   const approvedGuides = guides.filter(g => g.status === 'Approved');
+  const rejectedGuides = guides.filter(g => g.status === 'Rejected');
+
+  const GUIDE_TABS = ['All', 'Pending', 'Approved', 'Rejected'];
+  const tabCounts = {
+    All: guides.length,
+    Pending: pendingGuides.length,
+    Approved: approvedGuides.length,
+    Rejected: rejectedGuides.length,
+  };
 
   const GuideAvatar = ({ guide }) => (
     guide.profileImageUrl ? (
@@ -71,8 +81,25 @@ const GuidesPage = () => {
         )}
       </div>
 
+            {/* 👇 Filter tabs */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        {GUIDE_TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+              activeTab === tab
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {tab} ({tabCounts[tab]})
+          </button>
+        ))}
+      </div>
+
       {/* Pending Approvals (Admin only) */}
-      {isAdmin && pendingGuides.length > 0 && (
+      {isAdmin && (activeTab === 'All' || activeTab === 'Pending') && pendingGuides.length > 0 && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-yellow-700 mb-3">Pending Approvals</h2>
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
@@ -107,35 +134,85 @@ const GuidesPage = () => {
         </div>
       )}
 
-      {/* All Guides */}
-      <h2 className="text-lg font-semibold text-gray-700 mb-3">
-        All Guides ({approvedGuides.length})
-      </h2>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {approvedGuides.map((guide) => (
-          <div key={guide.id} className="rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md">
-            <div className="flex gap-3">
-              <GuideAvatar guide={guide} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate font-semibold text-gray-800">{guide.fullName}</p>
-                  {guide.status === 'Approved' && (
-                    <Verified fontSize="small" className="text-green-600" />
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-yellow-500">⭐</span>
-                  <span className="text-sm font-medium">{guide.rating || 0}</span>
-                  <span className="text-xs text-gray-400">({guide.reviewCount || 0} reviews)</span>
-                </div>
-              </div>
+      {/* 👇 Empty state for Pending tab when nothing to approve */}
+      {isAdmin && activeTab === 'Pending' && pendingGuides.length === 0 && (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500 mb-6">
+          No pending guides to approve.
+        </div>
+      )}
+
+      {/* All / Approved Guides */}
+      {(activeTab === 'All' || activeTab === 'Approved') && (
+        <>
+          <h2 className="text-lg font-semibold text-gray-700 mb-3">
+            Approved Guides ({approvedGuides.length})
+          </h2>
+          {approvedGuides.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+              No approved guides yet.
             </div>
-            <div className="mt-3 border-t border-gray-100 pt-3">
-              <GuideDetails guide={guide} />
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {approvedGuides.map((guide) => (
+                <div key={guide.id} className="rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md">
+                  <div className="flex gap-3">
+                    <GuideAvatar guide={guide} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-semibold text-gray-800">{guide.fullName}</p>
+                        {guide.status === 'Approved' && (
+                          <Verified fontSize="small" className="text-green-600" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-yellow-500">⭐</span>
+                        <span className="text-sm font-medium">{guide.rating || 0}</span>
+                        <span className="text-xs text-gray-400">({guide.reviewCount || 0} reviews)</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 border-t border-gray-100 pt-3">
+                    <GuideDetails guide={guide} />
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        ))}
-      </div>
+          )}
+        </>
+      )}
+
+      {/* Rejected Guides */}
+      {activeTab === 'Rejected' && (
+        <>
+          <h2 className="text-lg font-semibold text-rose-700 mb-3">
+            Rejected Guides ({rejectedGuides.length})
+          </h2>
+          {rejectedGuides.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+              No rejected guides.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {rejectedGuides.map((guide) => (
+                <div key={guide.id} className="rounded-xl border border-rose-200 bg-white p-4 shadow-sm">
+                  <div className="flex gap-3">
+                    <GuideAvatar guide={guide} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-gray-800">{guide.fullName}</p>
+                      <span className="inline-block mt-1 rounded-full bg-rose-100 text-rose-700 px-2 py-0.5 text-[11px] font-semibold">
+                        Rejected
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3 border-t border-gray-100 pt-3">
+                    <GuideDetails guide={guide} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
