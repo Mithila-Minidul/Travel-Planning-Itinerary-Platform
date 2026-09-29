@@ -26,12 +26,11 @@ namespace Backend.Controllers
         /// <summary>
         /// Get all registered Travel Agents (Pending & Approved)
         /// </summary>
-        [HttpGet("travel-agents")]
+                [HttpGet("travel-agents")]
         public async Task<IActionResult> GetTravelAgents()
         {
-            // ✅ FIX: Compare string with string
             var agents = await _context.Users
-                .Where(u => u.Role == "TravelAgent")  // ✅ String, not enum
+                .Where(u => u.Role == "TravelAgent")
                 .Select(u => new UserProfileDto
                 {
                     Id = u.Id,
@@ -42,7 +41,8 @@ namespace Backend.Controllers
                     AgencyName = u.AgencyName,
                     AgentLicenseNumber = u.AgentLicenseNumber,
                     Role = u.Role.ToString(),
-                    IsActive = u.IsActive
+                    IsActive = u.IsActive,
+                    Status = u.Status   // 👈 ADDED
                 })
                 .ToListAsync();
 
@@ -72,24 +72,38 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Admin approves or disables a Travel Agent account
+        /// Admin approves or rejects a Travel Agent account.
+        /// Status values: "Active" | "Rejected"
         /// </summary>
         [HttpPatch("travel-agents/{id:guid}/status")]
         public async Task<IActionResult> UpdateAgentStatus(Guid id, [FromBody] UserStatusUpdateDto dto)
         {
-            // ✅ FIX: Compare string with string
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == id && u.Role == "TravelAgent");  // ✅ String, not enum
+                .FirstOrDefaultAsync(u => u.Id == id && u.Role == "TravelAgent");
 
             if (user == null)
             {
                 return NotFound(new { message = "Travel Agent not found." });
             }
 
-            user.IsActive = dto.IsActive;
+            var newStatus = dto.Status?.Trim() ?? string.Empty;
+
+            if (newStatus != "Active" && newStatus != "Rejected")
+            {
+                return BadRequest(new { message = "Status must be 'Active' or 'Rejected'." });
+            }
+
+            user.Status = newStatus;
+            user.IsActive = newStatus == "Active";  // keep the old boolean in sync
+
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = $"Travel Agent status updated to {(user.IsActive ? "Active/Approved" : "Inactive")}" });
+            return Ok(new
+            {
+                message = $"Travel Agent status updated to {newStatus}.",
+                status = user.Status,
+                isActive = user.IsActive
+            });
         }
         /// <summary>
         /// Aggregated recent activity feed for the Admin dashboard.
