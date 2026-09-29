@@ -21,6 +21,38 @@ import {
   TrendingUp,
   WarningAmber,
 } from '@mui/icons-material';
+import {
+  ResponsiveContainer,
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Cell,
+} from 'recharts';
+
+const BookingsCustomTooltip = ({ active, payload }) => {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0].payload;
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 min-w-[200px] max-w-[260px]">
+      <p className="text-sm font-semibold text-slate-900 mb-2">{data.destination}</p>
+      <div className="flex items-center justify-between text-xs text-slate-500 mb-2 pb-2 border-b border-slate-100">
+        <span>Total bookings</span>
+        <span className="font-bold text-emerald-600">{data.total}</span>
+      </div>
+      <div className="space-y-1.5">
+        {data.experiences.map((exp, idx) => (
+          <div key={idx} className="flex items-start justify-between gap-3 text-xs">
+            <span className="text-slate-600 leading-snug">{exp.name}</span>
+            <span className="font-semibold text-slate-800 whitespace-nowrap">{exp.count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -39,6 +71,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
     const [bookingsCount, setBookingsCount] = useState(0);
   const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
+    const [bookings, setBookings] = useState([]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -85,10 +118,11 @@ const AdminDashboard = () => {
     const fetchBookings = async () => {
       try {
         const res = await bookingAPI.getAll();
-        const bookings = res.data || [];
-        setBookingsCount(bookings.length);
+        const list = res.data || [];
+        setBookings(list);
+        setBookingsCount(list.length);
         setPendingBookingsCount(
-          bookings.filter((b) => b.status === 'Pending').length
+          list.filter((b) => b.status === 'Pending').length
         );
       } catch (err) {
         console.error('Failed to load bookings count:', err);
@@ -140,6 +174,27 @@ const AdminDashboard = () => {
   const pieChartStyle = totalUsers > 0 
     ? { background: `conic-gradient(#4f46e5 0% ${guidePercent}%, #10b981 ${guidePercent}% ${guidePercent + agentPercent}%, #f59e0b ${guidePercent + agentPercent}% 100%)` }
     : { background: '#e2e8f0' }; // Fallback grey circle if there are 0 users
+
+      // ✅ Build destination · experience booking counts for the trend chart
+  const bookingsTrendData = (() => {
+    const map = {};
+    bookings.forEach((b) => {
+      const dest = (b.destinationName || 'Unknown').trim();
+      const exp = (b.experienceTitle || 'Unknown').trim();
+      if (!map[dest]) map[dest] = { destination: dest, total: 0, experiences: {} };
+      map[dest].total += 1;
+      map[dest].experiences[exp] = (map[dest].experiences[exp] || 0) + 1;
+    });
+    return Object.values(map)
+      .map((d) => ({
+        destination: d.destination,
+        total: d.total,
+        experiences: Object.entries(d.experiences)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count),
+      }))
+      .sort((a, b) => b.total - a.total);
+  })();
 
   if (loading) return <div className="flex justify-center items-center h-64">Loading dashboard...</div>;
 
@@ -197,15 +252,54 @@ const AdminDashboard = () => {
               {[28, 42, 34, 58, 45, 68].map((height, index) => <div key={index} className="flex-1 rounded-t bg-indigo-200" style={{ height: `${height}%` }} />)}
             </div>
           </div>
-          <div className="rounded-xl border bg-white p-6 shadow-sm">
+                    <div className="rounded-xl border bg-white p-6 shadow-sm">
             <div className="mb-5 flex items-center gap-2">
               <TrendingUp className="text-emerald-600" />
-              <div><h2 className="font-semibold text-slate-900">Bookings Trend</h2><p className="text-xs text-slate-400">No booking data yet</p></div>
+              <div>
+                <h2 className="font-semibold text-slate-900">Bookings Trend</h2>
+                <p className="text-xs text-slate-400">
+                  {bookingsCount > 0
+                    ? `${bookingsCount} booking(s) across ${bookingsTrendData.length} destination(s)`
+                    : 'No booking data yet'}
+                </p>
+              </div>
             </div>
-            <div className="relative h-36 overflow-hidden border-b border-l border-slate-200">
-              <svg viewBox="0 0 400 140" preserveAspectRatio="none" className="h-full w-full" aria-label="Bookings trend placeholder">
-                <polyline points="0,120 70,92 140,105 210,65 280,82 350,38 400,52" fill="none" stroke="#10b981" strokeWidth="4" strokeLinecap="round" />
-              </svg>
+            <div className="h-56">
+              {bookingsTrendData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsBarChart
+                    data={bookingsTrendData}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="destination"
+                      tick={{ fontSize: 11, fill: '#334155' }}
+                      interval={0}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(16, 185, 129, 0.06)' }}
+                      content={<BookingsCustomTooltip />}
+                    />
+                    <Bar dataKey="total" radius={[8, 8, 0, 0]} maxBarSize={60}>
+                      {bookingsTrendData.map((_, index) => (
+                        <Cell
+                          key={index}
+                          fill={['#10b981', '#4f46e5', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899'][index % 6]}
+                        />
+                      ))}
+                    </Bar>
+                  </RechartsBarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-sm text-slate-400">
+                  No booking data yet.
+                </div>
+              )}
             </div>
           </div>
         </div>
