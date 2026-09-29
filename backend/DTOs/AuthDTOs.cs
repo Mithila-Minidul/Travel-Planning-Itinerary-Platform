@@ -100,13 +100,14 @@ namespace Backend.DTOs
         public string? AgentLicenseNumber { get; set; }
         public string Role { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public string? Status { get; set; }
         public Guid? GuideId { get; set; }
         public string? GuideStatus { get; set; }
     }
 
     public class UserStatusUpdateDto
     {
-        public bool IsActive { get; set; }
+        public string Status { get; set; } = string.Empty;  // "Active" | "Rejected"
     }
     public class UpdateProfileDto
     {
