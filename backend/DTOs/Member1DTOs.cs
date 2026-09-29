@@ -43,6 +43,16 @@ namespace Backend.DTOs
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public SeasonType CurrentSeason { get; set; } = SeasonType.Regular;
+
+        // ✅ NEW
+        [MaxLength(100)]
+        public string? BestTimeToVisit { get; set; }
+
+        [MaxLength(50)]
+        public string? IdealDuration { get; set; }
+
+        [MaxLength(500)]
+        public string? Highlights { get; set; }
     }
 
     public class DestinationResponseDto
@@ -57,6 +67,11 @@ namespace Backend.DTOs
         public double Longitude { get; set; }
         public string CurrentSeason { get; set; } = string.Empty;
         public int ActiveExperiencesCount { get; set; }
+
+        // ✅ NEW
+        public string? BestTimeToVisit { get; set; }
+        public string? IdealDuration { get; set; }
+        public string? Highlights { get; set; }
     }
 
     // ================= LOCAL GUIDE DTOs =================
@@ -116,7 +131,6 @@ namespace Backend.DTOs
         [Required, RegularExpression(@"^([01]\d|2[0-3]):[0-5]\d$")]
         public string EndTime { get; set; } = "12:00";
 
-
         [MaxLength(500)]
         public string MeetingPoint { get; set; } = string.Empty;
 
@@ -125,6 +139,30 @@ namespace Backend.DTOs
         public bool IsDynamicPricingEnabled { get; set; } = true;
         public decimal WeekendMultiplier { get; set; } = 1.15m;
         public decimal PeakSeasonMultiplier { get; set; } = 1.25m;
+
+        // ✅ NEW — Enrichment Fields (all optional)
+        [MaxLength(2000)]
+        public string? WhatIncluded { get; set; }
+
+        [MaxLength(2000)]
+        public string? WhatNotIncluded { get; set; }
+
+        [MaxLength(1000)]
+        public string? WhatToBring { get; set; }
+
+        [MaxLength(500)]
+        public string? CancellationPolicy { get; set; }
+
+        [MaxLength(200)]
+        public string? Languages { get; set; }
+
+        [MaxLength(50)]
+        public string? FitnessLevel { get; set; }
+
+        public int? MinAge { get; set; }
+
+        [MaxLength(500)]
+        public string? ImportantNotes { get; set; }
     }
 
     public class ExperienceResponseDto
@@ -151,6 +189,16 @@ namespace Backend.DTOs
         public string Status { get; set; } = string.Empty;
         public decimal Rating { get; set; }
         public int TotalBookingsCount { get; set; }
+
+        // ✅ NEW — Enrichment Fields
+        public string? WhatIncluded { get; set; }
+        public string? WhatNotIncluded { get; set; }
+        public string? WhatToBring { get; set; }
+        public string? CancellationPolicy { get; set; }
+        public string? Languages { get; set; }
+        public string? FitnessLevel { get; set; }
+        public int? MinAge { get; set; }
+        public string? ImportantNotes { get; set; }
     }
 
     // ================= DYNAMIC PRICING CALCULATION DTO =================
@@ -175,7 +223,7 @@ namespace Backend.DTOs
         public string Description { get; set; } = string.Empty;
         public int Humidity { get; set; }
         public double WindSpeedKmh { get; set; }
-        public string WeatherSuitability { get; set; } = string.Empty; // e.g., "Ideal for outdoor hiking"
+        public string WeatherSuitability { get; set; } = string.Empty;
     }
 
     // ================= AI RESEARCH AGENT TOOL DTO =================

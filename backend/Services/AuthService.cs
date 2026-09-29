@@ -190,5 +190,55 @@ namespace Backend.Services
                 GuideStatus = user.LocalGuideProfile?.Status.ToString()
             };
         }
+        public async Task<object> UpdateProfileAsync(Guid userId, UpdateProfileDto dto)
+{
+    var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId)
+        ?? throw new KeyNotFoundException("User not found.");
+
+    if (string.IsNullOrWhiteSpace(dto.FullName))
+        throw new InvalidOperationException("Full name is required.");
+
+    user.FullName = dto.FullName.Trim();
+    user.PhoneNumber = dto.PhoneNumber?.Trim();
+
+    // 👇 ADDED: Only update image if a new URL was provided
+    if (!string.IsNullOrWhiteSpace(dto.ProfileImageUrl))
+        user.ProfileImageUrl = dto.ProfileImageUrl.Trim();
+
+    user.UpdatedAt = DateTime.UtcNow;
+
+    await _context.SaveChangesAsync();
+
+    return new
+    {
+        id = user.Id,
+        fullName = user.FullName,
+        email = user.Email,
+        phoneNumber = user.PhoneNumber,
+        profileImageUrl = user.ProfileImageUrl,
+        role = user.Role,
+        isActive = user.IsActive
+    };
+}
+
+        public async Task ChangePasswordAsync(Guid userId, ChangePasswordDto dto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId)
+                ?? throw new KeyNotFoundException("User not found.");
+
+            if (string.IsNullOrWhiteSpace(dto.OldPassword) || string.IsNullOrWhiteSpace(dto.NewPassword))
+                throw new InvalidOperationException("Both old and new passwords are required.");
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.OldPassword, user.PasswordHash))
+                throw new InvalidOperationException("Current password is incorrect.");
+
+            if (dto.NewPassword.Length < 6)
+                throw new InvalidOperationException("New password must be at least 6 characters.");
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

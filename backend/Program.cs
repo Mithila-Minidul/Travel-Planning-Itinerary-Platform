@@ -32,14 +32,23 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // 3. Register Application Services
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPlannerAgentService, PlannerAgentService>();
 builder.Services.AddHttpClient<IWeatherService, WeatherService>();
+builder.Services.AddHttpClient("AiService");
 builder.Services.AddScoped<ImageUploadService>();
+
+// ============ MEMBER 3 — BOOKINGS + PAYMENTS ============
+builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<PayHereService>();
 
 // Member 1 Service Registrations
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IDestinationService, DestinationService>();
 builder.Services.AddScoped<ILocalGuideService, LocalGuideService>();
 builder.Services.AddScoped<IExperienceService, ExperienceService>();
+
+builder.Services.AddScoped<IReviewService, ReviewService>();
 
 // 4. Configure JWT Authentication
 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") 

@@ -15,6 +15,8 @@ import {
   Verified,
   RateReview,
   SmartToy,
+  Assessment,
+  Replay,
 } from '@mui/icons-material';
 
 const Sidebar = () => {
@@ -37,6 +39,7 @@ const Sidebar = () => {
       { label: 'All Trips', icon: <Luggage />, path: '/trips' },
       { label: 'All Bookings', icon: <BookOnline />, path: '/bookings' },
       { label: 'Payments', icon: <Payments />, path: '/payments' },
+      { label: 'Refunds', icon: <Replay />, path: '/refunds' },
       { label: 'Reviews', icon: <Reviews />, path: '/reviews' },
     );
   }
@@ -46,6 +49,7 @@ const Sidebar = () => {
     menuItems.push(
       { label: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
       { label: 'AI Review Queue', icon: <SmartToy />, path: '/ai-review' },
+      { label: 'AI Performance', icon: <Assessment />, path: '/ai-performance' },
       { label: 'All Trips', icon: <Tour />, path: '/trips' },
     );
   }

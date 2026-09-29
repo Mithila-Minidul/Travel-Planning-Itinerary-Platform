@@ -19,6 +19,14 @@ import MyExperiencesPage from './pages/MyExperiencesPage';
 import ExperienceForm from './components/experiences/ExperienceForm';
 import TravelAgentsPage from './pages/TravelAgentsPage';
 import TravelersPage from './pages/TravelersPage';
+import TripsPage from './pages/TripsPage';
+import TripDetailPage from './pages/TripDetailPage';
+import AIPerformancePage from './pages/AIPerformancePage';
+import BookingsPage from './pages/BookingsPage';
+import PaymentDashboardPage from './pages/PaymentDashboardPage';
+import RefundManagementPage from './pages/RefundManagementPage';
+import BookingDetailPage from './pages/BookingDetailPage';
+import ReviewManagementPage from './pages/ReviewManagementPage';
 
 function App() {
   return (
@@ -92,6 +100,52 @@ function App() {
             <Route path="/travelers" element={
               <ProtectedRoute allowedRoles={['Admin']}>
                 <TravelersPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/trips" element={
+              <ProtectedRoute allowedRoles={['Admin', 'TravelAgent', 'Traveler']}>
+                <TripsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/trips/:id" element={
+              <ProtectedRoute allowedRoles={['Admin', 'TravelAgent', 'Traveler']}>
+                <TripDetailPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/ai-performance" element={
+              <ProtectedRoute allowedRoles={['Admin', 'TravelAgent']}>
+                <AIPerformancePage />
+              </ProtectedRoute>
+            } />
+                        <Route path="/bookings" element={
+              <ProtectedRoute allowedRoles={['Admin', 'LocalGuide', 'Traveler']}>
+                <BookingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/payments" element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <PaymentDashboardPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/refunds" element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <RefundManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/bookings/:id" element={
+              <ProtectedRoute allowedRoles={['Admin', 'LocalGuide', 'Traveler']}>
+                <BookingDetailPage />
+              </ProtectedRoute>
+            } />
+                        {/* Reviews */}
+            <Route path="/reviews" element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <ReviewManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/reviews-ratings" element={
+              <ProtectedRoute allowedRoles={['LocalGuide']}>
+                <ReviewManagementPage />
               </ProtectedRoute>
             } />
           </Route>

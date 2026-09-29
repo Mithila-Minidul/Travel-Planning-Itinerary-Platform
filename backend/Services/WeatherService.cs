@@ -23,13 +23,22 @@ namespace Backend.Services
         public async Task<WeatherResponseDto> GetWeatherForDestinationAsync(Destination destination)
         {
             var apiKey = Environment.GetEnvironmentVariable("WEATHER_API_KEY");
-            var baseUrl = Environment.GetEnvironmentVariable("WEATHER_BASE_URL") ?? "https://api.openweathermap.org/data/2.5";
+            var baseUrl = Environment.GetEnvironmentVariable("WEATHER_BASE_URL")
+                          ?? "https://api.openweathermap.org/data/2.5";
 
             // Fallback mock weather if no API key is provided during testing
             if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR_OPENWEATHERMAP_API_KEY")
             {
+                _logger.LogWarning(
+                    "WEATHER_API_KEY missing or placeholder. Returning MOCK weather for {Destination}. " +
+                    "Set a real OpenWeatherMap key in backend/.env for live data.",
+                    destination.Name);
                 return GetMockWeather(destination.Name);
             }
+
+            _logger.LogInformation(
+                "Fetching live weather for {Destination} ({Lat}, {Lon}) from OpenWeatherMap.",
+                destination.Name, destination.Latitude, destination.Longitude);
 
             try
             {
@@ -38,7 +47,9 @@ namespace Backend.Services
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning($"Weather API returned {response.StatusCode}. Falling back to default data.");
+                    _logger.LogWarning(
+                        "OpenWeatherMap returned {Status} for {Destination}. Falling back to mock.",
+                        response.StatusCode, destination.Name);
                     return GetMockWeather(destination.Name);
                 }
 
@@ -52,9 +63,15 @@ namespace Backend.Services
                 var condition = root.GetProperty("weather")[0].GetProperty("main").GetString() ?? "Clear";
                 var description = root.GetProperty("weather")[0].GetProperty("description").GetString() ?? "Clear sky";
 
-                string suitability = condition.ToLower().Contains("rain") 
-                    ? "Rain expected: Indoor activities or waterproof gear recommended." 
+                string suitability = condition.ToLower().Contains("rain")
+                    ? "Rain expected: Indoor activities or waterproof gear recommended."
                     : "Excellent conditions for outdoor activities and hikes.";
+
+                // ✅ Success log — proves LIVE data was used
+                _logger.LogInformation(
+                    "Live weather for {Destination}: {Temp}°C, {Condition} ({Description}), " +
+                    "humidity {Humidity}%, wind {Wind} km/h.",
+                    destination.Name, Math.Round(temp, 1), condition, description, humidity, Math.Round(wind, 1));
 
                 return new WeatherResponseDto
                 {
@@ -69,7 +86,9 @@ namespace Backend.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching live weather.");
+                _logger.LogError(ex,
+                    "Error fetching live weather for {Destination}. Falling back to mock.",
+                    destination.Name);
                 return GetMockWeather(destination.Name);
             }
         }

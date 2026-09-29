@@ -10,6 +10,11 @@ class Destination {
   final String currentSeason;
   final int activeExperiencesCount;
 
+  // ✅ NEW ENRICHMENT FIELDS
+  final String? bestTimeToVisit;
+  final String? idealDuration;
+  final String? highlights;
+
   Destination({
     required this.id,
     required this.name,
@@ -21,6 +26,10 @@ class Destination {
     required this.longitude,
     required this.currentSeason,
     required this.activeExperiencesCount,
+    // ✅ NEW
+    this.bestTimeToVisit,
+    this.idealDuration,
+    this.highlights,
   });
 
   factory Destination.fromJson(Map<String, dynamic> json) {
@@ -35,6 +44,10 @@ class Destination {
       longitude: (json['longitude'] ?? 0).toDouble(),
       currentSeason: json['currentSeason'] ?? 'Regular',
       activeExperiencesCount: json['activeExperiencesCount'] ?? 0,
+      // ✅ NEW
+      bestTimeToVisit: json['bestTimeToVisit'],
+      idealDuration: json['idealDuration'],
+      highlights: json['highlights'],
     );
   }
 }

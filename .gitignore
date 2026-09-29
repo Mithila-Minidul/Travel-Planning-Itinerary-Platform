@@ -75,6 +75,11 @@ mobile/ios/Flutter/Flutter.framework
 mobile/ios/Flutter/Flutter.podspec
 mobile/ios/Flutter/Generated.xcconfig
 mobile/ios/Flutter/flutter_export_environment.sh
+# Flutter Generated Plugin Files
+**/generated_plugin_registrant.cc
+**/generated_plugin_registrant.h
+**/generated_plugins.cmake
+**/GeneratedPluginRegistrant.swift
 
 # ============================================
 # PYTHON AI SERVICE
@@ -82,11 +87,12 @@ mobile/ios/Flutter/flutter_export_environment.sh
 ai-service/venv/
 ai-service/env/
 ai-service/.venv/
-ai-service/__pycache__/
-ai-service/*.pyc
-ai-service/*.pyo
 ai-service/.env
 ai-service/.env.*.local
+ai-service/**/__pycache__/
+ai-service/**/*.pyc
+ai-service/**/*.pyo
+ai-service/**/*.py[cod]
 ai-service/*.log
 ai-service/logs/
 ai-service/.pytest_cache/
@@ -100,6 +106,7 @@ ai-service/*.onnx
 ai-service/dist/
 ai-service/build/
 ai-service/*.egg-info/
+ai-service/chroma_db/
 
 # ============================================
 # IDE

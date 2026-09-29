@@ -15,16 +15,25 @@ namespace Backend.Data
         public DbSet<Destination> Destinations => Set<Destination>();
         public DbSet<Category> Categories => Set<Category>();
         public DbSet<Experience> Experiences => Set<Experience>();
+        public DbSet<Trip> Trips => Set<Trip>();
+        public DbSet<TripStop> TripStops => Set<TripStop>();
+        public DbSet<AgentWorkflow> AgentWorkflows => Set<AgentWorkflow>();
+        public DbSet<AgentExecutionLog> AgentExecutionLogs => Set<AgentExecutionLog>();
+        public DbSet<Booking> Bookings => Set<Booking>();
+        public DbSet<Payment> Payments => Set<Payment>();
+        public DbSet<Review> Reviews => Set<Review>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            // ---------- USER ----------
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasIndex(u => u.Email).IsUnique();
             });
 
+            // ---------- LOCAL GUIDE ----------
             modelBuilder.Entity<LocalGuide>(entity =>
             {
                 entity.HasOne(g => g.User)
@@ -33,6 +42,7 @@ namespace Backend.Data
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // ---------- EXPERIENCE ----------
             modelBuilder.Entity<Experience>(entity =>
             {
                 entity.HasOne(e => e.Guide)
@@ -51,8 +61,127 @@ namespace Backend.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // ---------- TRIP ----------
+            modelBuilder.Entity<Trip>(entity =>
+            {
+                entity.HasOne(t => t.Traveler)
+                      .WithMany()
+                      .HasForeignKey(t => t.TravelerId)
+                      .OnDelete(DeleteBehavior.Cascade);
 
-            // Seed Admin & Default categories
+                entity.HasOne(t => t.TravelAgent)
+                      .WithMany()
+                      .HasForeignKey(t => t.TravelAgentId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(t => t.Destination)
+                      .WithMany()
+                      .HasForeignKey(t => t.DestinationId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(t => t.Guide)
+                      .WithMany()
+                      .HasForeignKey(t => t.GuideId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ---------- TRIP STOP ----------
+            modelBuilder.Entity<TripStop>(entity =>
+            {
+                entity.HasOne(s => s.Trip)
+                      .WithMany(t => t.TripStops)
+                      .HasForeignKey(s => s.TripId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(s => s.Experience)
+                      .WithMany()
+                      .HasForeignKey(s => s.ExperienceId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+                        // ---------- BOOKING ----------
+            modelBuilder.Entity<Booking>(entity =>
+            {
+                entity.HasIndex(b => b.ConfirmationCode).IsUnique();
+
+                entity.HasOne(b => b.Trip)
+                      .WithMany()
+                      .HasForeignKey(b => b.TripId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(b => b.TripStop)
+                      .WithMany()
+                      .HasForeignKey(b => b.TripStopId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(b => b.Experience)
+                      .WithMany()
+                      .HasForeignKey(b => b.ExperienceId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(b => b.Traveler)
+                      .WithMany()
+                      .HasForeignKey(b => b.TravelerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(b => b.Guide)
+                      .WithMany()
+                      .HasForeignKey(b => b.GuideId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ---------- PAYMENT ----------
+            modelBuilder.Entity<Payment>(entity =>
+            {
+                entity.HasIndex(p => p.BookingId).IsUnique();
+
+                entity.HasOne(p => p.Booking)
+                      .WithOne(b => b.Payment)
+                      .HasForeignKey<Payment>(p => p.BookingId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ---------- AGENT WORKFLOW ----------
+            modelBuilder.Entity<AgentWorkflow>(entity =>
+            {
+                entity.HasOne(w => w.Trip)
+                      .WithMany()
+                      .HasForeignKey(w => w.TripId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(w => w.TripId);
+            });
+
+            // ---------- AGENT EXECUTION LOG ----------
+            modelBuilder.Entity<AgentExecutionLog>(entity =>
+            {
+                entity.HasOne(l => l.AgentWorkflow)
+                      .WithMany(w => w.ExecutionLogs)
+                      .HasForeignKey(l => l.AgentWorkflowId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(l => l.AgentWorkflowId);
+            });
+
+            // ---------- REVIEW ----------
+        modelBuilder.Entity<Review>(entity =>
+        {
+            entity.HasOne(r => r.Booking)
+                .WithMany()
+                .HasForeignKey(r => r.BookingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.Experience)
+                .WithMany()
+                .HasForeignKey(r => r.ExperienceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.Traveler)
+                .WithMany()
+                .HasForeignKey(r => r.TravelerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
             SeedInitialData(modelBuilder);
         }
 
