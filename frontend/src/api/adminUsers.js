@@ -10,4 +10,7 @@ export const adminUserAPI = {
 
   // ✅ ADD THIS: Fetches all Travelers
   getTravelers: () => apiClient.get('/AdminUsers/travelers'),
+
+    // ✅ Recent activity feed for dashboard
+  getRecentActivity: (limit = 5) => apiClient.get(`/AdminUsers/recent-activity?limit=${limit}`),
 };
