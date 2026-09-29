@@ -26,6 +26,7 @@ import BookingsPage from './pages/BookingsPage';
 import PaymentDashboardPage from './pages/PaymentDashboardPage';
 import RefundManagementPage from './pages/RefundManagementPage';
 import BookingDetailPage from './pages/BookingDetailPage';
+import ReviewManagementPage from './pages/ReviewManagementPage';
 
 function App() {
   return (
@@ -134,6 +135,17 @@ function App() {
             <Route path="/bookings/:id" element={
               <ProtectedRoute allowedRoles={['Admin', 'LocalGuide', 'Traveler']}>
                 <BookingDetailPage />
+              </ProtectedRoute>
+            } />
+                        {/* Reviews */}
+            <Route path="/reviews" element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <ReviewManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/reviews-ratings" element={
+              <ProtectedRoute allowedRoles={['LocalGuide']}>
+                <ReviewManagementPage />
               </ProtectedRoute>
             } />
           </Route>
