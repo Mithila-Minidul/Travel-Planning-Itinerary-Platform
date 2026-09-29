@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../destinations/destination_browse_screen.dart';
 import '../trips/trip_list_screen.dart';
 import '../bookings/booking_list_screen.dart';
+import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -304,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildProfile(BuildContext context, user) {
-    return const SafeArea(child: Center(child: Text('Profile Screen')));
+    return const ProfileScreen();
   }
 
   Widget _buildComingSoon(String title, IconData icon) {
