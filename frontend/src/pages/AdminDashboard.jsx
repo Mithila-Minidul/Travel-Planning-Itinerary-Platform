@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import { destinationAPI } from '../api/destinations';
 import { experienceAPI } from '../api/experiences';
 import { guideAPI } from '../api/guides';
@@ -22,6 +23,7 @@ import {
   WarningAmber,
   PersonAdd,
   Star,
+  SmartToy,
 } from '@mui/icons-material';
 import {
   ResponsiveContainer,
@@ -495,12 +497,35 @@ const AdminDashboard = () => {
         </div>
 
         <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center gap-2"><ManageAccounts className="text-indigo-600" /><h2 className="font-semibold text-slate-900">Quick Actions</h2></div>
+          <div className="mb-4 flex items-center gap-2">
+            <ManageAccounts className="text-indigo-600" />
+            <h2 className="font-semibold text-slate-900">Quick Actions</h2>
+          </div>
           <div className="flex flex-wrap gap-3">
-            <a href="/destinations/new" className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"><AddLocationAlt fontSize="small" /> Add Destination</a>
-            <a href="/guides" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><People fontSize="small" /> Review Guides</a>
-            <button type="button" disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400"><CalendarToday fontSize="small" /> Bookings unavailable</button>
-            <button type="button" disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400"><BarChart fontSize="small" /> Analytics unavailable</button>
+            <Link
+              to="/destinations/new"
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition"
+            >
+              <AddLocationAlt fontSize="small" /> Add Destination
+            </Link>
+            <Link
+              to="/guides"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+            >
+              <People fontSize="small" /> Review Guides
+            </Link>
+            <Link
+              to="/bookings"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+            >
+              <BookOnline fontSize="small" /> View All Bookings
+            </Link>
+            <Link
+              to="/ai-performance"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+            >
+              <SmartToy fontSize="small" /> AI Performance
+            </Link>
           </div>
         </div>
       </div>
