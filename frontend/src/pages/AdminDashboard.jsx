@@ -4,6 +4,7 @@ import { destinationAPI } from '../api/destinations';
 import { experienceAPI } from '../api/experiences';
 import { guideAPI } from '../api/guides';
 import { adminUserAPI } from '../api/adminUsers';
+import { bookingAPI } from '../api/bookings';
 import {
   AddLocationAlt,
   AttachMoney,
@@ -36,6 +37,8 @@ const AdminDashboard = () => {
     pendingExperiences: 0,
   });
   const [loading, setLoading] = useState(true);
+    const [bookingsCount, setBookingsCount] = useState(0);
+  const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -77,6 +80,24 @@ const AdminDashboard = () => {
     fetchStats();
   }, []);
 
+    // ✅ SEPARATE effect for bookings — isolated so it can't break the dashboard
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const res = await bookingAPI.getAll();
+        const bookings = res.data || [];
+        setBookingsCount(bookings.length);
+        setPendingBookingsCount(
+          bookings.filter((b) => b.status === 'Pending').length
+        );
+      } catch (err) {
+        console.error('Failed to load bookings count:', err);
+        // leave counts at 0 — dashboard keeps working
+      }
+    };
+    fetchBookings();
+  }, []);
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning';
@@ -97,7 +118,7 @@ const AdminDashboard = () => {
       icon: <Group />, 
       color: 'bg-indigo-600' 
     },
-    { label: 'Bookings', value: 0, detail: 'Pending: 0', icon: <BookOnline />, color: 'bg-amber-500' },
+    { label: 'Bookings', value: bookingsCount, detail: `Pending: ${pendingBookingsCount}`, icon: <BookOnline />, color: 'bg-amber-500' },
     { label: 'Revenue', value: '$0', detail: 'This month', icon: <AttachMoney />, color: 'bg-emerald-600' },
     { label: 'Experiences', value: adminApprovedExperiences, detail: `${adminData.destinations.length} destinations`, icon: <Tour />, color: 'bg-sky-600' },
   ];
