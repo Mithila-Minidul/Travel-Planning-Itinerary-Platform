@@ -234,4 +234,9 @@ namespace Backend.DTOs
         public decimal? MaxBudget { get; set; }
         public DateTime? TravelDate { get; set; }
     }
+    public class GuideStatsDto
+    {
+        public decimal AverageRating { get; set; }
+        public int TotalReviews { get; set; }
+    }
 }

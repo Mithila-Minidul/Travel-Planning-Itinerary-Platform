@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { experienceAPI } from '../api/experiences';
 import { bookingAPI } from '../api/bookings';
+import { guideAPI } from '../api/guides';
 import {
   Add,
   AttachMoney,
@@ -17,19 +18,25 @@ const GuideDashboard = () => {
   const [guideExperiences, setGuideExperiences] = useState([]);
   const [guideBookings, setGuideBookings] = useState([]);
   const [totalEarnings, setTotalEarnings] = useState(0); // 👈 ADD THIS
+    const [guideStats, setGuideStats] = useState({ averageRating: 0, totalReviews: 0 }); // 👈 ADDED
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [expRes, bkRes, earnRes] = await Promise.all([
+        const [expRes, bkRes, earnRes, statsRes] = await Promise.all([
           experienceAPI.getMine(),
           bookingAPI.getAll(),
-          bookingAPI.getEarnings(), // 👈 ADD THIS
+          bookingAPI.getEarnings(),
+          guideAPI.getMyStats(),   // 👈 ADDED
         ]);
         setGuideExperiences(expRes.data || []);
         setGuideBookings(bkRes.data || []);
-        setTotalEarnings(Number(earnRes.data.totalEarnings) || 0); // 👈 ADD THIS
+        setTotalEarnings(Number(earnRes.data.totalEarnings) || 0);
+        setGuideStats({
+          averageRating: Number(statsRes.data.averageRating) || 0,
+          totalReviews: Number(statsRes.data.totalReviews) || 0,
+        });
       } catch (error) {
         console.error('Error fetching guide stats:', error);
       } finally {
@@ -48,9 +55,6 @@ const GuideDashboard = () => {
 
   const pendingExperiences = guideExperiences.filter((experience) => experience.status === 'PendingApproval').length;
   const approvedExperiences = guideExperiences.filter((experience) => experience.status === 'Approved').length;
-  const averageRating = guideExperiences.length
-    ? guideExperiences.reduce((total, experience) => total + (Number(experience.rating) || 0), 0) / guideExperiences.length
-    : 0;
   const recentExperiences = guideExperiences.slice(0, 5);
     const pendingBookings = guideBookings.filter(
     (b) => b.status === 'Pending'
@@ -61,7 +65,7 @@ const GuideDashboard = () => {
     { label: 'Pending Experiences', value: pendingExperiences, icon: <PendingActions />, color: 'bg-amber-500' },
     { label: 'Pending Bookings', value: pendingBookings, icon: <CalendarToday />, color: 'bg-amber-500' },
     { label: 'Total Earnings', value: `$${totalEarnings.toFixed(2)}`, icon: <AttachMoney />, color: 'bg-emerald-600' }, // 👈 ADD THIS
-    { label: 'Avg Rating', value: averageRating.toFixed(1), icon: <Star />, color: 'bg-yellow-500' },
+    { label: 'Avg Rating', value: guideStats.averageRating.toFixed(1), icon: <Star />, color: 'bg-yellow-500' },
   ];
 
   if (loading) return <div className="flex justify-center items-center h-64">Loading dashboard...</div>;
