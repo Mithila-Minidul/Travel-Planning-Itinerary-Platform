@@ -72,11 +72,27 @@ const GuideDashboard = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-800">
-          {getGreeting()}, {user?.fullName || user?.email}!
-        </h1>
-        <p className="text-gray-500">Guide Dashboard - Manage Your Experiences</p>
+      <div className="mb-8 flex items-center gap-4">
+        {/* 👇 Profile Photo */}
+        {user?.profileImageUrl ? (
+          <img
+            src={user.profileImageUrl}
+            alt={user?.fullName || 'Guide'}
+            className="h-16 w-16 rounded-full object-cover ring-4 ring-indigo-100 shadow-md"
+          />
+        ) : (
+          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold ring-4 ring-indigo-100 shadow-md">
+            {(user?.fullName || 'G')[0].toUpperCase()}
+          </div>
+        )}
+
+        {/* Greeting */}
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-gray-800 truncate">
+            {getGreeting()}, {user?.fullName || user?.email}!
+          </h1>
+          <p className="text-gray-500">Guide Dashboard - Manage Your Experiences</p>
+        </div>
       </div>
 
       <div className="space-y-6">
