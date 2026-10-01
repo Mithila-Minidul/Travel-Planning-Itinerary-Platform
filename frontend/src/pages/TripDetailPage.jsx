@@ -16,6 +16,8 @@ const TripDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [agentWorkflow, setAgentWorkflow] = useState(null);
+    const [showReject, setShowReject] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   useEffect(() => {
     fetchTrip();
@@ -43,10 +45,13 @@ const TripDetailPage = () => {
     }
   };
 
-  const handleReview = async (status) => {
+  const handleReview = async (status, reason = null) => {
     setReviewLoading(true);
     try {
-      await tripAPI.reviewTrip(id, { status });
+      const payload = reason
+        ? { status, rejectionReason: reason }
+        : { status };
+      await tripAPI.reviewTrip(id, payload);
       await fetchTrip();
       await fetchAgentWorkflow();
     } catch (error) {
@@ -54,6 +59,16 @@ const TripDetailPage = () => {
     } finally {
       setReviewLoading(false);
     }
+  };
+
+  const handleRejectSubmit = async () => {
+    if (!rejectReason.trim()) {
+      alert('Please provide a reason for rejection.');
+      return;
+    }
+    await handleReview('Rejected', rejectReason.trim());
+    setShowReject(false);
+    setRejectReason('');
   };
 
   if (loading) return <div className="p-8 text-center">Loading trip...</div>;
@@ -103,6 +118,17 @@ const TripDetailPage = () => {
             {trip.status}
           </span>
         </div>
+
+        {/* 👇 Rejection banner */}
+        {trip.status === 'Rejected' && trip.rejectionReason && (
+          <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-4 flex items-start gap-3">
+            <Cancel className="text-rose-600 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-rose-800">Rejected by Travel Agent</p>
+              <p className="text-sm text-rose-700 mt-1">{trip.rejectionReason}</p>
+            </div>
+          </div>
+        )}
 
         <p className="text-gray-600 mb-4">{trip.objective || 'No objective provided.'}</p>
 
@@ -347,7 +373,7 @@ const TripDetailPage = () => {
             </button>
             <button
               disabled={reviewLoading}
-              onClick={() => handleReview('Rejected')}
+              onClick={() => { setShowReject(true); setRejectReason(''); }}
               className="px-5 py-2 rounded-lg bg-rose-600 text-white font-medium hover:bg-rose-700 flex items-center gap-2 disabled:opacity-50"
             >
               <Cancel fontSize="small" /> Reject
@@ -363,6 +389,43 @@ const TripDetailPage = () => {
           <p className="text-sm text-gray-600 mt-1">
             This trip is waiting for a Travel Agent to review it. You can view the details above.
           </p>
+        </div>
+      )}
+
+      {/* ============ REJECT MODAL ============ */}
+      {showReject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center gap-2 mb-2">
+              <Cancel className="text-rose-600" />
+              <h2 className="text-lg font-bold text-slate-900">Reject Trip</h2>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">
+              Let {trip.travelerName} know why you're rejecting this trip.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows="3"
+              placeholder="e.g. Budget too low for the requested experiences."
+              className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => { setShowReject(false); setRejectReason(''); }}
+                className="rounded-lg bg-slate-100 px-4 py-2 text-slate-700 hover:bg-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={reviewLoading}
+                onClick={handleRejectSubmit}
+                className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                <Cancel fontSize="small" /> Confirm Rejection
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
