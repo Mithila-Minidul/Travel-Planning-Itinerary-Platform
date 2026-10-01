@@ -38,6 +38,7 @@ const Sidebar = () => {
       { label: 'Travelers', icon: <People />, path: '/travelers' },
       { label: 'All Trips', icon: <Luggage />, path: '/trips' },
       { label: 'All Bookings', icon: <BookOnline />, path: '/bookings' },
+      { label: 'AI Performance', icon: <Assessment />, path: '/ai-performance' },
       { label: 'Payments', icon: <Payments />, path: '/payments' },
       { label: 'Refunds', icon: <Replay />, path: '/refunds' },
       { label: 'Reviews', icon: <Reviews />, path: '/reviews' },

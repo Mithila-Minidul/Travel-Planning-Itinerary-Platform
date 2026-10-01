@@ -5,6 +5,7 @@ using Backend.Interfaces;
 using Backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Backend.Controllers
 {
@@ -28,5 +29,17 @@ namespace Backend.Controllers
         // ✅ FIX: Use [FromQuery] instead of [FromBody]
         public async Task<IActionResult> UpdateStatus(Guid id, [FromQuery] GuideStatus status) 
             => Ok(await _guideService.UpdateGuideStatusAsync(id, status));
+        
+                // 👇 ADDED: Get the logged-in guide's live stats (avg rating + review count)
+        [Authorize(Roles = "LocalGuide")]
+        [HttpGet("me/stats")]
+        public async Task<IActionResult> GetMyStats()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized(new { message = "Invalid token claims." });
+
+            return Ok(await _guideService.GetMyStatsAsync(userId));
+        }
     }
 }

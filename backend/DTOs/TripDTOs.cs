@@ -109,6 +109,7 @@ namespace Backend.DTOs
         public string? PreferredTimes { get; set; }
         public string? SpecialRequests { get; set; }
         public string? AiErrors { get; set; }
+        public string? RejectionReason { get; set; }   // 👈 ADDED
         public decimal TotalEstimatedCost { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

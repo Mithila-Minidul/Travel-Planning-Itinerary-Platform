@@ -33,6 +33,11 @@ namespace Backend.Models
 
         public new bool IsActive { get; set; } = false;
 
+        // 👇 ADDED: Real 3-state status for Travel Agents (and other roles)
+        // Pending | Active | Rejected (nullable → Travelers just use "Active")
+        [MaxLength(20)]
+        public string? Status { get; set; }
+
         public LocalGuide? LocalGuideProfile { get; set; }
     }
 }

@@ -55,6 +55,7 @@ namespace Backend.Services
                 ProfileImageUrl = request.ProfileImageUrl,
                 Role = request.Role,  // ✅ Already string
                 IsActive = request.Role == "Traveler",  // ✅ Travelers auto-active
+                Status = request.Role == "Traveler" ? "Active" : "Pending",
                 AgencyName = request.Role == "TravelAgent" ? request.AgencyName.Trim() : null,
                 AgentLicenseNumber = request.Role == "TravelAgent" ? request.AgentLicenseNumber.Trim() : null
             };
