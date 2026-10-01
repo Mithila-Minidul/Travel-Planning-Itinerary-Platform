@@ -22,6 +22,7 @@ const ExperiencesPage = () => {
   const [imageIndexes, setImageIndexes] = useState({});
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('All');
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
 
@@ -81,6 +82,24 @@ const ExperiencesPage = () => {
       };
     });
   };
+    const EXPERIENCE_TABS = ['All', 'Pending', 'Approved', 'Rejected'];
+
+  const tabCounts = EXPERIENCE_TABS.reduce((acc, tab) => {
+    if (tab === 'All') {
+      acc[tab] = experiences.length;
+    } else if (tab === 'Pending') {
+      acc[tab] = experiences.filter((e) => e.status === 'PendingApproval').length;
+    } else {
+      acc[tab] = experiences.filter((e) => e.status === tab).length;
+    }
+    return acc;
+  }, {});
+
+  const filteredExperiences = activeTab === 'All'
+    ? experiences
+    : activeTab === 'Pending'
+    ? experiences.filter((e) => e.status === 'PendingApproval')
+    : experiences.filter((e) => e.status === activeTab);
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading experiences...</div>;
@@ -92,13 +111,32 @@ const ExperiencesPage = () => {
         <h1 className="text-2xl font-bold text-gray-800">Experiences</h1>
       </div>
 
-      {experiences.length === 0 ? (
+      {/* 👇 Filter tabs (same style as All Trips page) */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        {EXPERIENCE_TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+              activeTab === tab
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {tab} ({tabCounts[tab]})
+          </button>
+        ))}
+      </div>
+
+      {filteredExperiences.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-12 text-center border">
-          <p className="text-gray-500">No experiences found.</p>
+          <p className="text-gray-500">
+            No {activeTab === 'All' ? '' : activeTab.toLowerCase() + ' '}experiences found.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {experiences.map((exp) => (
+          {filteredExperiences.map((exp) => (
             <article key={exp.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
               <div className="relative h-40 bg-slate-100">
                 {getImages(exp).length > 0 ? (

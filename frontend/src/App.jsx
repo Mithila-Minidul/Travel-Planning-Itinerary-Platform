@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/common/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
@@ -10,6 +10,7 @@ import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 
 // Pages
+import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
 import DestinationsPage from './pages/DestinationsPage';
 import ExperiencesPage from './pages/ExperiencesPage';
@@ -28,19 +29,27 @@ import RefundManagementPage from './pages/RefundManagementPage';
 import BookingDetailPage from './pages/BookingDetailPage';
 import ReviewManagementPage from './pages/ReviewManagementPage';
 
+// 👇 Landing gate: show landing if not logged in, otherwise redirect to dashboard
+const LandingOrDashboard = () => {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  return <LandingPage />;
+};
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Toaster position="top-right" />
         <Routes>
-          {/* Public Routes */}
+          {/* ============ PUBLIC ROUTES (No Layout) ============ */}
+          <Route path="/" element={<LandingOrDashboard />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Protected Routes */}
+          {/* ============ PROTECTED ROUTES (Wrapped in Layout) ============ */}
           <Route element={<Layout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <DashboardPage />
@@ -117,7 +126,7 @@ function App() {
                 <AIPerformancePage />
               </ProtectedRoute>
             } />
-                        <Route path="/bookings" element={
+            <Route path="/bookings" element={
               <ProtectedRoute allowedRoles={['Admin', 'LocalGuide', 'Traveler']}>
                 <BookingsPage />
               </ProtectedRoute>
@@ -137,7 +146,8 @@ function App() {
                 <BookingDetailPage />
               </ProtectedRoute>
             } />
-                        {/* Reviews */}
+
+            {/* Reviews */}
             <Route path="/reviews" element={
               <ProtectedRoute allowedRoles={['Admin']}>
                 <ReviewManagementPage />
@@ -151,7 +161,7 @@ function App() {
           </Route>
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

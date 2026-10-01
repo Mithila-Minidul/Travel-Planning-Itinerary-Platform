@@ -216,6 +216,28 @@ namespace Backend.Services
             await _context.SaveChangesAsync();
             return await GetGuideByIdAsync(id);
         }
+                // 👇 ADDED: Average rating + review count for the logged-in guide
+        public async Task<GuideStatsDto> GetMyStatsAsync(Guid userId)
+        {
+            var guide = await _context.LocalGuides
+                .FirstOrDefaultAsync(g => g.UserId == userId);
+
+            if (guide == null)
+                return new GuideStatsDto { AverageRating = 0m, TotalReviews = 0 };
+
+            var ratings = await _context.Reviews
+                .Where(r => r.Experience.GuideId == guide.Id)
+                .Select(r => r.Rating)
+                .ToListAsync();
+
+            return new GuideStatsDto
+            {
+                AverageRating = ratings.Any()
+                    ? Math.Round((decimal)ratings.Average(), 1)
+                    : 0m,
+                TotalReviews = ratings.Count
+            };
+        }
     }
 
     // ================= EXPERIENCE SERVICE (DYNAMIC PRICING ENGINE) =================

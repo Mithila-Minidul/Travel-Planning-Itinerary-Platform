@@ -168,12 +168,29 @@ const AgentDashboard = () => {
     <div>
       {/* ================= HEADER ================= */}
       <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">
-            {getGreeting()}, {user?.fullName || user?.email}!
-          </h1>
-          <p className="text-gray-500">Travel Agent Dashboard — platform overview</p>
+        <div className="flex items-center gap-4">
+          {/* 👇 Profile Photo */}
+          {user?.profileImageUrl ? (
+            <img
+              src={user.profileImageUrl}
+              alt={user?.fullName || 'Travel Agent'}
+              className="h-16 w-16 rounded-full object-cover ring-4 ring-indigo-100 shadow-md"
+            />
+          ) : (
+            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold ring-4 ring-indigo-100 shadow-md">
+              {(user?.fullName || 'A')[0].toUpperCase()}
+            </div>
+          )}
+
+          {/* Greeting */}
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-800 truncate">
+              {getGreeting()}, {user?.fullName || user?.email}!
+            </h1>
+            <p className="text-gray-500">Travel Agent Dashboard — platform overview</p>
+          </div>
         </div>
+
         <button
           onClick={() => navigate('/ai-performance')}
           className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"

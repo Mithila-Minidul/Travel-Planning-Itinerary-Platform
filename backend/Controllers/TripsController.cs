@@ -76,6 +76,7 @@ namespace Backend.Controllers
                     PreferredTimes = t.PreferredTimes,
                     SpecialRequests = t.SpecialRequests,
                     AiErrors = t.AiErrors,
+                    RejectionReason = t.RejectionReason,   // 👈 ADDED
                     TotalEstimatedCost = t.TripStops.Sum(s => s.EstimatedCost)
                         * (t.NumberOfTravelers <= 0 ? 1 : t.NumberOfTravelers),
                     CreatedAt = t.CreatedAt,
@@ -156,6 +157,7 @@ namespace Backend.Controllers
                 PreferredTimes = trip.PreferredTimes,
                 SpecialRequests = trip.SpecialRequests,
                 AiErrors = trip.AiErrors,
+                RejectionReason = trip.RejectionReason,   // 👈 ADDED
                 TotalEstimatedCost = trip.TripStops.Sum(s => s.EstimatedCost)
                     * (trip.NumberOfTravelers <= 0 ? 1 : trip.NumberOfTravelers),
                 CreatedAt = trip.CreatedAt,
@@ -354,6 +356,18 @@ namespace Backend.Controllers
                 return BadRequest(new { message = $"Trip has already been {trip.Status}." });
 
             trip.Status = request.Status;
+
+            // 👇 Save rejection reason when rejecting
+            if (request.Status == "Rejected")
+            {
+                trip.RejectionReason = string.IsNullOrWhiteSpace(request.RejectionReason)
+                    ? "Rejected by Travel Agent."
+                    : request.RejectionReason.Trim();
+            }
+            else if (request.Status == "Approved")
+            {
+                trip.RejectionReason = null;   // clear any prior reason
+            }
 
             if (Guid.TryParse(agentIdClaim, out var agentId))
             {

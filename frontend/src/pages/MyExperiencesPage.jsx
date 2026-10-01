@@ -8,6 +8,7 @@ const MyExperiencesPage = () => {
   const [experiences, setExperiences] = useState([]);
   const [imageIndexes, setImageIndexes] = useState({});
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('All');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,6 +53,26 @@ const MyExperiencesPage = () => {
     }
   };
 
+    // 👇 Filter tabs
+  const EXPERIENCE_TABS = ['All', 'Pending', 'Approved', 'Rejected'];
+
+  const tabCounts = {
+    All: experiences.length,
+    Pending: experiences.filter((e) => e.status === 'PendingApproval').length,
+    Approved: experiences.filter((e) => e.status === 'Approved').length,
+    Rejected: experiences.filter((e) => e.status === 'Rejected').length,
+  };
+
+  const filteredExperiences = activeTab === 'All'
+    ? experiences
+    : activeTab === 'Pending'
+    ? experiences.filter((e) => e.status === 'PendingApproval')
+    : experiences.filter((e) => e.status === activeTab);
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading your experiences...</div>;
+  }
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading your experiences...</div>;
   }
@@ -68,19 +89,44 @@ const MyExperiencesPage = () => {
         </button>
       </div>
 
-      {experiences.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center border">
-          <p className="text-gray-500">You haven't submitted any experiences yet.</p>
+      {/* 👇 Filter tabs */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        {EXPERIENCE_TABS.map((tab) => (
           <button
-            onClick={() => navigate('/experiences/new')}
-            className="mt-4 text-indigo-600 hover:underline"
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+              activeTab === tab
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
           >
-            Create your first experience →
+            {tab} ({tabCounts[tab]})
           </button>
+        ))}
+      </div>
+
+      {filteredExperiences.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm p-12 text-center border">
+          {experiences.length === 0 ? (
+            <>
+              <p className="text-gray-500">You haven't submitted any experiences yet.</p>
+              <button
+                onClick={() => navigate('/experiences/new')}
+                className="mt-4 text-indigo-600 hover:underline"
+              >
+                Create your first experience →
+              </button>
+            </>
+          ) : (
+            <p className="text-gray-500">
+              No {activeTab.toLowerCase()} experiences found.
+            </p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {experiences.map((exp) => (
+          {filteredExperiences.map((exp) => (
             <article key={exp.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
               <div className="relative h-52 bg-slate-100 sm:h-60">
                 {getImages(exp).length > 0 ? (
