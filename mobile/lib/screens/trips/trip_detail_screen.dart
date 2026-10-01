@@ -278,6 +278,50 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         AiProgressWidget(status: (trip['status'] ?? 'Pending').toString()),
         const SizedBox(height: 16),
 
+        // ================= REJECTION BANNER =================
+        if ((trip['status'] ?? '') == 'Rejected' &&
+            (trip['rejectionReason'] ?? '').toString().isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red.shade200, width: 1.5),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.cancel, color: Colors.red.shade700, size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Trip Rejected by Travel Agent',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade900,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        trip['rejectionReason'].toString(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.red.shade900,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // ================= BOOK NOW BUTTON =================
         _buildBookNowButton(trip),
         const SizedBox(height: 16),
