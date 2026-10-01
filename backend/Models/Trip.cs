@@ -58,6 +58,10 @@ namespace Backend.Models
         // Null/empty means the itinerary was built cleanly.
         [MaxLength(2000)]
         public string? AiErrors { get; set; }
+                // 👇 Reason provided by the Travel Agent when rejecting the itinerary.
+        // Null when the trip is not rejected.
+        [MaxLength(1000)]
+        public string? RejectionReason { get; set; }
 
         // ============================================================
 
