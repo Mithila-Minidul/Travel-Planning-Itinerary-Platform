@@ -1,12 +1,20 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Backend.DTOs
 {
     public class ReviewCreateDto
     {
+        [Required]
         public Guid BookingId { get; set; }
+
+        [Required]
         public Guid ExperienceId { get; set; }
+
+        [Required, Range(1, 5, ErrorMessage = "Rating must be between 1 and 5 stars.")]
         public int Rating { get; set; }
+
+        [Required, MaxLength(2000)]
         public string Comment { get; set; } = string.Empty;
     }
 
