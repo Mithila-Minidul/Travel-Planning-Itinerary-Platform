@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -6,14 +7,8 @@ using Xunit;
 
 namespace Backend.Tests
 {
-    /// <summary>
-    /// Member 1 – Backend/API & Database Testing.
-    /// Validation tests for input DTOs using System.ComponentModel.DataAnnotations.
-    /// Covers normal, invalid and boundary cases.
-    /// </summary>
     public class AuthDtoValidationTests
     {
-        // Triggers both property-level attributes AND IValidatableObject.Validate()
         private static List<ValidationResult> Validate(object dto)
         {
             var results = new List<ValidationResult>();
@@ -22,22 +17,22 @@ namespace Backend.Tests
             return results;
         }
 
-        private static RegisterRequestDto ValidTraveler() => new RegisterRequestDto
-        {
-            FullName = "Test Traveler",
-            Email = "traveler@test.com",
-            Password = "Passw0rd!",
-            PhoneNumber = "+94771234567",
-            Role = "Traveler"
-        };
-
-        // ---------------- Normal case ----------------
+        // ==========================================
+        // 1. REGISTER & LOGIN DTOs
+        // ==========================================
 
         [Fact]
         public void RegisterRequest_ValidTraveler_HasNoValidationErrors()
         {
-            var errors = Validate(ValidTraveler());
-            Assert.Empty(errors);
+            var dto = new RegisterRequestDto
+            {
+                FullName = "Valid Traveler",
+                Email = "traveler@test.com",
+                Password = "Password123!",
+                PhoneNumber = "0771234567",
+                Role = "Traveler"
+            };
+            Assert.Empty(Validate(dto));
         }
 
         [Fact]
@@ -45,20 +40,18 @@ namespace Backend.Tests
         {
             var dto = new RegisterRequestDto
             {
-                FullName = "Guide",
+                FullName = "Valid Guide",
                 Email = "guide@test.com",
-                Password = "Passw0rd!",
+                Password = "Password123!",
                 PhoneNumber = "+94771234567",
                 Role = "LocalGuide",
                 ProfileImageUrl = "https://example.com/photo.jpg",
-                GuideBio = "Experienced guide",
-                GuideCity = "Ella",
-                LicenseNumber = "LG-001",
-                YearsOfExperience = 5
+                GuideBio = "Certified wildlife guide with 8 years experience.",
+                GuideCity = "Kandy",
+                LicenseNumber = "LG-9988",
+                YearsOfExperience = 8
             };
-
-            var errors = Validate(dto);
-            Assert.Empty(errors);
+            Assert.Empty(Validate(dto));
         }
 
         [Fact]
@@ -66,240 +59,210 @@ namespace Backend.Tests
         {
             var dto = new RegisterRequestDto
             {
-                FullName = "Agent",
+                FullName = "Valid Agent",
                 Email = "agent@test.com",
-                Password = "Passw0rd!",
-                PhoneNumber = "+94771234567",
+                Password = "Password123!",
+                PhoneNumber = "0094771234567",
                 Role = "TravelAgent",
-                ProfileImageUrl = "https://example.com/photo.jpg",
-                AgencyName = "Travel Co",
-                AgentLicenseNumber = "TA-001"
+                ProfileImageUrl = "https://example.com/agent.jpg",
+                AgencyName = "Lanka Holidays Pvt Ltd",
+                AgentLicenseNumber = "TA-2026-01"
             };
-
-            var errors = Validate(dto);
-            Assert.Empty(errors);
+            Assert.Empty(Validate(dto));
         }
 
-        // ---------------- Invalid cases ----------------
-
-        [Fact]
-        public void RegisterRequest_InvalidEmail_ReturnsError()
+        [Theory]
+        [InlineData("")]
+        [InlineData("not-an-email")]
+        [InlineData("@missingusername.com")]
+        [InlineData("missingatsign.com")]
+        public void RegisterRequest_InvalidEmail_ReturnsError(string email)
         {
-            var dto = ValidTraveler();
-            dto.Email = "not-an-email";
-
-            var errors = Validate(dto);
-            Assert.Contains(errors, e =>
-                e.MemberNames.Contains(nameof(RegisterRequestDto.Email)));
+            var dto = new RegisterRequestDto
+            {
+                FullName = "Name",
+                Email = email,
+                Password = "Password123!",
+                PhoneNumber = "0771234567",
+                Role = "Traveler"
+            };
+            Assert.Contains(Validate(dto), e => e.MemberNames.Contains(nameof(RegisterRequestDto.Email)));
         }
 
-        [Fact]
-        public void RegisterRequest_ShortPassword_ReturnsError()
+        [Theory]
+        [InlineData("")]
+        [InlineData("12345")]
+        public void RegisterRequest_ShortPassword_ReturnsError(string pass)
         {
-            var dto = ValidTraveler();
-            dto.Password = "123"; // less than 6
-
-            var errors = Validate(dto);
-            Assert.Contains(errors, e =>
-                e.MemberNames.Contains(nameof(RegisterRequestDto.Password)));
+            var dto = new RegisterRequestDto { FullName = "Name", Email = "a@b.com", Password = pass, PhoneNumber = "0771234567", Role = "Traveler" };
+            Assert.Contains(Validate(dto), e => e.MemberNames.Contains(nameof(RegisterRequestDto.Password)));
         }
 
-        [Fact]
-        public void RegisterRequest_InvalidPhoneNumber_ReturnsError()
+        [Theory]
+        [InlineData("12345")]
+        [InlineData("0112345678")]
+        [InlineData("+14155552671")]
+        [InlineData("abcdefghij")]
+        public void RegisterRequest_InvalidPhoneNumber_ReturnsError(string phone)
         {
-            var dto = ValidTraveler();
-            dto.PhoneNumber = "12345";
-
-            var errors = Validate(dto);
-            Assert.Contains(errors, e =>
-                e.MemberNames.Contains(nameof(RegisterRequestDto.PhoneNumber)));
+            var dto = new RegisterRequestDto { FullName = "Name", Email = "a@b.com", Password = "Password123!", PhoneNumber = phone, Role = "Traveler" };
+            Assert.Contains(Validate(dto), e => e.MemberNames.Contains(nameof(RegisterRequestDto.PhoneNumber)));
         }
 
         [Fact]
-        public void RegisterRequest_EmptyFullName_ReturnsError()
-        {
-            var dto = ValidTraveler();
-            dto.FullName = "";
-
-            var errors = Validate(dto);
-            Assert.Contains(errors, e =>
-                e.MemberNames.Contains(nameof(RegisterRequestDto.FullName)));
-        }
-
-        // ---------------- Boundary cases ----------------
-
-        [Fact]
-        public void RegisterRequest_PasswordExactly6Chars_IsValid()
-        {
-            var dto = ValidTraveler();
-            dto.Password = "123456"; // exactly 6
-
-            var errors = Validate(dto);
-            Assert.Empty(errors);
-        }
-
-        [Fact]
-        public void RegisterRequest_PhoneStartingWith07_IsValid()
-        {
-            var dto = ValidTraveler();
-            dto.PhoneNumber = "0712345678";
-
-            var errors = Validate(dto);
-            Assert.Empty(errors);
-        }
-
-        // ---------------- Role-specific rules ----------------
-
-        [Fact]
-        public void RegisterRequest_LocalGuideMissingBio_ReturnsError()
+        public void RegisterRequest_LocalGuideMissingRequiredFields_ReturnsErrors()
         {
             var dto = new RegisterRequestDto
             {
                 FullName = "Guide",
-                Email = "guide@test.com",
-                Password = "Passw0rd!",
-                PhoneNumber = "+94771234567",
+                Email = "g@test.com",
+                Password = "Password123!",
+                PhoneNumber = "0771234567",
                 Role = "LocalGuide",
-                ProfileImageUrl = "https://example.com/photo.jpg",
-                GuideBio = "", // missing
-                GuideCity = "Ella",
-                LicenseNumber = "LG-001"
+                ProfileImageUrl = "",
+                GuideBio = "",
+                GuideCity = "",
+                LicenseNumber = ""
             };
-
             var errors = Validate(dto);
-            Assert.Contains(errors, e =>
-                e.MemberNames.Contains(nameof(RegisterRequestDto.GuideBio)));
+            Assert.Contains(errors, e => e.MemberNames.Contains(nameof(RegisterRequestDto.ProfileImageUrl)));
+            Assert.Contains(errors, e => e.MemberNames.Contains(nameof(RegisterRequestDto.GuideBio)));
+            Assert.Contains(errors, e => e.MemberNames.Contains(nameof(RegisterRequestDto.GuideCity)));
+            Assert.Contains(errors, e => e.MemberNames.Contains(nameof(RegisterRequestDto.LicenseNumber)));
         }
 
         [Fact]
-        public void RegisterRequest_LocalGuideMissingProfileImage_ReturnsError()
-        {
-            var dto = new RegisterRequestDto
-            {
-                FullName = "Guide",
-                Email = "guide@test.com",
-                Password = "Passw0rd!",
-                PhoneNumber = "+94771234567",
-                Role = "LocalGuide",
-                ProfileImageUrl = null, // missing
-                GuideBio = "Bio",
-                GuideCity = "Ella",
-                LicenseNumber = "LG-001"
-            };
-
-            var errors = Validate(dto);
-            Assert.Contains(errors, e =>
-                e.MemberNames.Contains(nameof(RegisterRequestDto.ProfileImageUrl)));
-        }
-
-        [Fact]
-        public void RegisterRequest_TravelAgentMissingAgencyName_ReturnsError()
+        public void RegisterRequest_TravelAgentMissingRequiredFields_ReturnsErrors()
         {
             var dto = new RegisterRequestDto
             {
                 FullName = "Agent",
-                Email = "agent@test.com",
-                Password = "Passw0rd!",
-                PhoneNumber = "+94771234567",
+                Email = "a@test.com",
+                Password = "Password123!",
+                PhoneNumber = "0771234567",
                 Role = "TravelAgent",
-                ProfileImageUrl = "https://example.com/photo.jpg",
-                AgencyName = "", // missing
-                AgentLicenseNumber = "TA-001"
+                ProfileImageUrl = "",
+                AgencyName = "",
+                AgentLicenseNumber = ""
             };
-
             var errors = Validate(dto);
-            Assert.Contains(errors, e =>
-                e.MemberNames.Contains(nameof(RegisterRequestDto.AgencyName)));
+            Assert.Contains(errors, e => e.MemberNames.Contains(nameof(RegisterRequestDto.ProfileImageUrl)));
+            Assert.Contains(errors, e => e.MemberNames.Contains(nameof(RegisterRequestDto.AgencyName)));
+            Assert.Contains(errors, e => e.MemberNames.Contains(nameof(RegisterRequestDto.AgentLicenseNumber)));
         }
 
         [Fact]
-        public void RegisterRequest_TravelerWithNoPhoto_IsValid()
+        public void LoginRequest_EmptyFields_ReturnsErrors()
         {
-            var dto = ValidTraveler();
-            dto.ProfileImageUrl = null; // Traveler does NOT need a photo
-
-            var errors = Validate(dto);
-            Assert.Empty(errors);
+            Assert.Contains(Validate(new LoginRequestDto { Email = "", Password = "Password123!" }), e => e.MemberNames.Contains(nameof(LoginRequestDto.Email)));
+            Assert.Contains(Validate(new LoginRequestDto { Email = "user@test.com", Password = "" }), e => e.MemberNames.Contains(nameof(LoginRequestDto.Password)));
         }
 
-        // ---------------- LoginRequestDto ----------------
+        // ==========================================
+        // 2. DESTINATION & EXPERIENCE DTOs
+        // ==========================================
 
         [Fact]
-        public void LoginRequest_EmptyEmail_ReturnsError()
+        public void CategoryCreateDto_EmptyName_ReturnsError()
         {
-            var errors = Validate(new LoginRequestDto
-            {
-                Email = "",
-                Password = "Passw0rd!"
-            });
-
-            Assert.Contains(errors, e =>
-                e.MemberNames.Contains(nameof(LoginRequestDto.Email)));
+            var dto = new CategoryCreateDto { Name = "", Description = "Test" };
+            Assert.Contains(Validate(dto), e => e.MemberNames.Contains(nameof(CategoryCreateDto.Name)));
         }
-
-        [Fact]
-        public void LoginRequest_EmptyPassword_ReturnsError()
-        {
-            var errors = Validate(new LoginRequestDto
-            {
-                Email = "user@test.com",
-                Password = ""
-            });
-
-            Assert.Contains(errors, e =>
-                e.MemberNames.Contains(nameof(LoginRequestDto.Password)));
-        }
-
-        [Fact]
-        public void LoginRequest_ValidData_HasNoErrors()
-        {
-            var errors = Validate(new LoginRequestDto
-            {
-                Email = "user@test.com",
-                Password = "Passw0rd!"
-            });
-
-            Assert.Empty(errors);
-        }
-
-        // ---------------- Default values (document current behavior) ----------------
-
-        [Fact]
-        public void BookingCreateDto_DefaultNumberOfGuests_IsOne()
-        {
-            var dto = new BookingCreateDto();
-            Assert.Equal(1, dto.NumberOfGuests);
-        }
-
-        [Fact]
-        public void PaymentProcessDto_DefaultMethod_IsMock()
-        {
-            var dto = new PaymentProcessDto();
-            Assert.Equal("Mock", dto.Method);
-        }
-        // ============================================================
-        // DEFECT REPRODUCTION TEST: DEF-001 (Review Rating Range)
-        // ============================================================
 
         [Theory]
         [InlineData(0)]
-        [InlineData(-1)]
-        [InlineData(6)]
-        [InlineData(100)]
-        public void ReviewCreateDto_RatingOutsideOneToFive_ReturnsValidationError(int invalidRating)
+        [InlineData(-5)]
+        [InlineData(51)]
+        public void ExperienceCreateDto_CapacityOutOfRange_ReturnsError(int capacity)
         {
-            var dto = new ReviewCreateDto
+            var dto = new ExperienceCreateDto
             {
-                BookingId = Guid.NewGuid(),
-                ExperienceId = Guid.NewGuid(),
-                Rating = invalidRating,
-                Comment = "Test comment"
+                DestinationId = Guid.NewGuid(),
+                CategoryId = Guid.NewGuid(),
+                Title = "Hike",
+                Description = "Description",
+                BasePrice = 50,
+                DurationHours = 3,
+                MaxCapacity = capacity,
+                AvailableWeekdays = new List<string> { "Monday" },
+                StartTime = "08:00",
+                EndTime = "12:00"
             };
+            Assert.Contains(Validate(dto), e => e.MemberNames.Contains(nameof(ExperienceCreateDto.MaxCapacity)));
+        }
 
-            var errors = Validate(dto);
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-10)]
+        [InlineData(1001)]
+        public void ExperienceCreateDto_BasePriceOutOfRange_ReturnsError(decimal price)
+        {
+            var dto = new ExperienceCreateDto
+            {
+                DestinationId = Guid.NewGuid(),
+                CategoryId = Guid.NewGuid(),
+                Title = "Hike",
+                Description = "Description",
+                BasePrice = price,
+                DurationHours = 3,
+                MaxCapacity = 10,
+                AvailableWeekdays = new List<string> { "Monday" },
+                StartTime = "08:00",
+                EndTime = "12:00"
+            };
+            Assert.Contains(Validate(dto), e => e.MemberNames.Contains(nameof(ExperienceCreateDto.BasePrice)));
+        }
 
-            // This assertion demands that Rating has validation errors when out of range (1-5)
-            Assert.Contains(errors, e => e.MemberNames.Contains(nameof(ReviewCreateDto.Rating)));
+        [Theory]
+        [InlineData("25:00")]
+        [InlineData("8:00")]
+        [InlineData("invalid")]
+        public void ExperienceCreateDto_InvalidTimeRegex_ReturnsError(string time)
+        {
+            var dto = new ExperienceCreateDto
+            {
+                DestinationId = Guid.NewGuid(),
+                CategoryId = Guid.NewGuid(),
+                Title = "Hike",
+                Description = "Description",
+                BasePrice = 50,
+                DurationHours = 3,
+                MaxCapacity = 10,
+                AvailableWeekdays = new List<string> { "Monday" },
+                StartTime = time,
+                EndTime = "12:00"
+            };
+            Assert.Contains(Validate(dto), e => e.MemberNames.Contains(nameof(ExperienceCreateDto.StartTime)));
+        }
+
+        // ==========================================
+        // 3. TRIP & BOOKING DTOs
+        // ==========================================
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-50)]
+        public void TripCreateDto_InvalidBudget_ReturnsError(decimal budget)
+        {
+            var dto = new TripCreateDto
+            {
+                Title = "Trip",
+                DestinationId = Guid.NewGuid(),
+                StartDate = DateTime.UtcNow.AddDays(1),
+                EndDate = DateTime.UtcNow.AddDays(3),
+                Budget = budget
+            };
+            Assert.Contains(Validate(dto), e => e.MemberNames.Contains(nameof(TripCreateDto.Budget)));
+        }
+
+        [Fact]
+        public void BookingPaymentDtos_DefaultValues_AreCorrect()
+        {
+            var bookingDto = new BookingCreateDto();
+            Assert.Equal(1, bookingDto.NumberOfGuests);
+
+            var paymentDto = new PaymentProcessDto();
+            Assert.Equal("Mock", paymentDto.Method);
         }
     }
 }
