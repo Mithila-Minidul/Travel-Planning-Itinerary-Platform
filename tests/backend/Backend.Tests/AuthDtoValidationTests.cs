@@ -277,5 +277,29 @@ namespace Backend.Tests
             var dto = new PaymentProcessDto();
             Assert.Equal("Mock", dto.Method);
         }
+        // ============================================================
+        // DEFECT REPRODUCTION TEST: DEF-001 (Review Rating Range)
+        // ============================================================
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(6)]
+        [InlineData(100)]
+        public void ReviewCreateDto_RatingOutsideOneToFive_ReturnsValidationError(int invalidRating)
+        {
+            var dto = new ReviewCreateDto
+            {
+                BookingId = Guid.NewGuid(),
+                ExperienceId = Guid.NewGuid(),
+                Rating = invalidRating,
+                Comment = "Test comment"
+            };
+
+            var errors = Validate(dto);
+
+            // This assertion demands that Rating has validation errors when out of range (1-5)
+            Assert.Contains(errors, e => e.MemberNames.Contains(nameof(ReviewCreateDto.Rating)));
+        }
     }
 }
