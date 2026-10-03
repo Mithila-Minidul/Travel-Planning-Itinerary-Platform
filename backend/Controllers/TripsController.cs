@@ -391,5 +391,47 @@ namespace Backend.Controllers
 
             return Ok(new { message = $"Trip successfully {request.Status}.", tripId = trip.Id });
         }
+        // ============================================================
+        // DELETE: api/Trips/{id}
+        // ONLY Admin — Only Approved or Rejected trips can be deleted
+        // ============================================================
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> DeleteTrip(Guid id)
+        {
+            var trip = await _context.Trips.FirstOrDefaultAsync(t => t.Id == id);
+            if (trip == null) return NotFound(new { message = "Trip not found." });
+
+            if (trip.Status == "Pending")
+            {
+                return BadRequest(new { message = "Pending trips cannot be deleted. Only Approved or Rejected trips can be deleted." });
+            }
+
+            // 1. Delete all bookings and reviews related to this trip
+            var bookings = await _context.Bookings.Where(b => b.TripId == id).ToListAsync();
+            if (bookings.Any())
+            {
+                var bookingIds = bookings.Select(b => b.Id).ToList();
+                var reviews = await _context.Reviews.Where(r => bookingIds.Contains(r.BookingId)).ToListAsync();
+                _context.Reviews.RemoveRange(reviews);
+                _context.Bookings.RemoveRange(bookings);
+            }
+
+            // 2. Delete agent workflows (cascades to execution logs)
+            var workflows = await _context.AgentWorkflows.Where(w => w.TripId == id).ToListAsync();
+            _context.AgentWorkflows.RemoveRange(workflows);
+
+            // 3. Delete trip stops
+            var stops = await _context.TripStops.Where(s => s.TripId == id).ToListAsync();
+            _context.TripStops.RemoveRange(stops);
+
+            // 4. Delete the trip entity
+            _context.Trips.Remove(trip);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Trip and all associated data deleted successfully." });
+        }
+    
     }
 }
