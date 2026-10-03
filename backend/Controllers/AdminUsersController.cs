@@ -235,5 +235,34 @@ namespace Backend.Controllers
 
             return Ok(result);
         }
+        /// <summary>
+        /// Admin permanently deletes a Travel Agent account and unlinks associated trips.
+        /// </summary>
+        [HttpDelete("travel-agents/{id:guid}")]
+        public async Task<IActionResult> DeleteTravelAgent(Guid id)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == id && u.Role == "TravelAgent");
+
+            if (user == null)
+            {
+                return NotFound(new { message = "Travel Agent not found." });
+            }
+
+            // Unlink travel agent from any assigned trips safely
+            var trips = await _context.Trips
+                .Where(t => t.TravelAgentId == id)
+                .ToListAsync();
+
+            foreach (var trip in trips)
+            {
+                trip.TravelAgentId = null;
+            }
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Travel Agent account deleted successfully." });
+        }
     }
 }
