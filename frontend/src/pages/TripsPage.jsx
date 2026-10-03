@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { tripAPI } from '../api/trips';
+import { useAuth } from '../context/AuthContext';
 import {
   LocationOn,
   CalendarToday,
@@ -9,7 +10,7 @@ import {
   Group,
   Speed,
   AttachMoney,
-  Verified,
+  Delete,
 } from '@mui/icons-material';
 
 const TripsPage = () => {
@@ -17,20 +18,35 @@ const TripsPage = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+
+  const fetchTrips = async () => {
+    try {
+      const res = await tripAPI.getAllTrips();
+      setTrips(res.data || []);
+    } catch (error) {
+      console.error('Error fetching trips:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchTrips = async () => {
-      try {
-        const res = await tripAPI.getAllTrips();
-        setTrips(res.data || []);
-      } catch (error) {
-        console.error('Error fetching trips:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchTrips();
   }, []);
+
+  const handleDelete = async (e, id, title) => {
+    e.stopPropagation(); // Prevents navigating to /trips/:id
+    if (window.confirm(`Are you sure you want to permanently delete the trip "${title}"? This action cannot be undone.`)) {
+      try {
+        await tripAPI.deleteTrip(id);
+        fetchTrips();
+      } catch (error) {
+        console.error('Error deleting trip:', error);
+        alert(error.response?.data?.message || 'Failed to delete trip.');
+      }
+    }
+  };
 
   if (loading) return <div className="p-8 text-center">Loading trips...</div>;
 
@@ -99,6 +115,7 @@ const TripsPage = () => {
           {filteredTrips.map((trip) => {
             const stopsCount = (trip.tripStops || []).length;
             const isOverBudget = trip.totalEstimatedCost > trip.budget;
+            const canDelete = isAdmin && (trip.status === 'Approved' || trip.status === 'Rejected');
 
             return (
               <div
@@ -241,6 +258,19 @@ const TripsPage = () => {
                     </p>
                   </div>
                 </div>
+
+                {/* ---------- DELETE BUTTON (ONLY FOR APPROVED & REJECTED TRIPS) ---------- */}
+                {canDelete && (
+                  <div className="px-5 py-2 bg-slate-50 border-t border-gray-100 flex justify-end">
+                    <button
+                      onClick={(e) => handleDelete(e, trip.id, trip.title)}
+                      className="text-red-600 hover:text-red-800 hover:bg-red-100/60 px-2.5 py-1 rounded-md flex items-center gap-1 transition text-xs font-semibold"
+                      title="Delete Trip"
+                    >
+                      <Delete fontSize="small" /> Delete
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
