@@ -5,4 +5,5 @@ export const guideAPI = {
   getById: (id) => apiClient.get(`/LocalGuides/${id}`),
   updateStatus: (id, status) => apiClient.patch(`/LocalGuides/${id}/status`, null, { params: { status } }),
   getMyStats: () => apiClient.get('/LocalGuides/me/stats'),
+  delete: (id) => apiClient.delete(`/LocalGuides/${id}`),
 };
