@@ -8,79 +8,40 @@ using Xunit;
 
 namespace Backend.Tests
 {
-    /// <summary>
-    /// Member 1 – Backend/API & Database Testing.
-    /// Unit tests for TokenService (JWT generation).
-    /// </summary>
     public class TokenServiceTests
     {
-        private static User SampleUser(string role = "Traveler")
+        private static User SampleUser(string role = "Traveler") => new User
         {
-            return new User
-            {
-                Id = Guid.NewGuid(),
-                FullName = "Test User",
-                Email = "test@example.com",
-                Role = role,
-                IsActive = true
-            };
-        }
+            Id = Guid.NewGuid(),
+            FullName = "Test Traveler",
+            Email = "traveler@example.com",
+            Role = role,
+            IsActive = true
+        };
 
         [Fact]
-        public void GenerateJwtToken_ReturnsNonEmptyString()
+        public void GenerateJwtToken_ReturnsValidThreeSegmentJwt()
         {
             var service = new TokenService();
-            var user = SampleUser();
-
-            var token = service.GenerateJwtToken(user);
+            var token = service.GenerateJwtToken(SampleUser());
 
             Assert.False(string.IsNullOrWhiteSpace(token));
+            Assert.Equal(3, token.Split('.').Length);
         }
 
         [Fact]
-        public void GenerateJwtToken_ProducesValidJwtFormat()
+        public void GenerateJwtToken_ContainsStandardAndRoleClaims()
         {
             var service = new TokenService();
-            var user = SampleUser();
-
-            var token = service.GenerateJwtToken(user);
-
-            // A JWT must have exactly 3 dot-separated segments: header.payload.signature
-            var segments = token.Split('.');
-            Assert.Equal(3, segments.Length);
-        }
-
-                [Fact]
-        public void GenerateJwtToken_ContainsExpectedClaims()
-        {
-            var service = new TokenService();
-            var user = SampleUser("Traveler");
+            var user = SampleUser("TravelAgent");
 
             var token = service.GenerateJwtToken(user);
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
-            // JwtSecurityTokenHandler writes .NET claim URIs as short JWT names.
-            // ReadJwtToken does NOT map them back, so we check the short names.
-            Assert.Equal(user.Id.ToString(),
-                jwt.Claims.First(c => c.Type == "nameid").Value);
-            Assert.Equal(user.Email,
-                jwt.Claims.First(c => c.Type == "email").Value);
-            Assert.Equal(user.FullName,
-                jwt.Claims.First(c => c.Type == "unique_name").Value);
-            Assert.Equal("Traveler",
-                jwt.Claims.First(c => c.Type == "role").Value);
-        }
-
-        [Fact]
-        public void GenerateJwtToken_WhenGuideIdIsNull_DoesNotIncludeGuideIdClaim()
-        {
-            var service = new TokenService();
-            var user = SampleUser("LocalGuide");
-
-            var token = service.GenerateJwtToken(user, guideId: null);
-            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-
-            Assert.DoesNotContain(jwt.Claims, c => c.Type == "GuideId");
+            Assert.Equal(user.Id.ToString(), jwt.Claims.First(c => c.Type == "nameid").Value);
+            Assert.Equal(user.Email, jwt.Claims.First(c => c.Type == "email").Value);
+            Assert.Equal(user.FullName, jwt.Claims.First(c => c.Type == "unique_name").Value);
+            Assert.Equal("TravelAgent", jwt.Claims.First(c => c.Type == "role").Value);
         }
 
         [Fact]
@@ -93,24 +54,33 @@ namespace Backend.Tests
             var token = service.GenerateJwtToken(user, guideId);
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
-            var claim = jwt.Claims.First(c => c.Type == "GuideId");
-            Assert.Equal(guideId.ToString(), claim.Value);
+            Assert.Equal(guideId.ToString(), jwt.Claims.First(c => c.Type == "GuideId").Value);
         }
 
         [Fact]
-        public void GenerateJwtToken_SetsExpiryInFuture()
+        public void GenerateJwtToken_WhenGuideIdNull_ExcludesGuideIdClaim()
         {
             var service = new TokenService();
-            var user = SampleUser();
+            var user = SampleUser("Traveler");
 
-            var token = service.GenerateJwtToken(user);
+            var token = service.GenerateJwtToken(user, null);
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+            Assert.DoesNotContain(jwt.Claims, c => c.Type == "GuideId");
+        }
+
+        [Fact]
+        public void GenerateJwtToken_SetsExpirationInFuture()
+        {
+            var service = new TokenService();
+            var token = service.GenerateJwtToken(SampleUser());
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
             Assert.True(jwt.ValidTo > DateTime.UtcNow);
         }
 
         [Fact]
-        public void GenerateJwtToken_TwoCalls_ProduceDifferentTokens()
+        public void GenerateJwtToken_ConsecutiveCalls_ProduceUniqueJtiTokens()
         {
             var service = new TokenService();
             var user = SampleUser();
@@ -118,7 +88,6 @@ namespace Backend.Tests
             var token1 = service.GenerateJwtToken(user);
             var token2 = service.GenerateJwtToken(user);
 
-            // Jti (unique token ID) must make them different
             Assert.NotEqual(token1, token2);
         }
     }
