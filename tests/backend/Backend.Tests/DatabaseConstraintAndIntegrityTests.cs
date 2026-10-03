@@ -10,18 +10,15 @@ namespace Backend.Tests
 {
     public class DatabaseConstraintAndIntegrityTests
     {
-        private static AppDbContext CreateIsolatedContext()
-        {
-            var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(databaseName: "DbIntegrity_" + Guid.NewGuid().ToString())
-                .Options;
-            return new AppDbContext(options);
-        }
+        private static AppDbContext CreateDb() =>
+            new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase("DbIntegrity_" + Guid.NewGuid().ToString())
+                .Options);
 
         [Fact]
         public void UserEntity_EmailIndex_IsConfiguredAsUnique()
         {
-            using var db = CreateIsolatedContext();
+            using var db = CreateDb();
             var emailIndex = db.Model.FindEntityType(typeof(User))
                 ?.GetIndexes()
                 .FirstOrDefault(i => i.Properties.Any(p => p.Name == "Email"));
@@ -33,7 +30,7 @@ namespace Backend.Tests
         [Fact]
         public void BookingEntity_ConfirmationCode_IsConfiguredAsUnique()
         {
-            using var db = CreateIsolatedContext();
+            using var db = CreateDb();
             var codeIndex = db.Model.FindEntityType(typeof(Booking))
                 ?.GetIndexes()
                 .FirstOrDefault(i => i.Properties.Any(p => p.Name == "ConfirmationCode"));
@@ -45,38 +42,13 @@ namespace Backend.Tests
         [Fact]
         public async Task Experience_MaintainsFullRelationalIntegrity_WithGuideDestinationAndCategory()
         {
-            using var db = CreateIsolatedContext();
+            using var db = CreateDb();
 
-            var dest = new Destination
-            {
-                Id = Guid.NewGuid(), Name = "Galle", ProvinceState = "Southern",
-                Country = "Sri Lanka", Description = "Historic fort city"
-            };
-
-            var cat = new Category
-            {
-                Id = Guid.NewGuid(), Name = "Historical",
-                Description = "Heritage tours", IconName = "temple"
-            };
-
-            var user = new User
-            {
-                Id = Guid.NewGuid(), FullName = "Galle Guide", Email = "galle.guide@test.com",
-                PasswordHash = "hash", PhoneNumber = "+94772222222", Role = "LocalGuide", IsActive = true
-            };
-
-            var guide = new LocalGuide
-            {
-                Id = Guid.NewGuid(), UserId = user.Id, User = user,
-                Bio = "Galle local", City = "Galle", Status = GuideStatus.Approved
-            };
-
-            var exp = new Experience
-            {
-                Id = Guid.NewGuid(), GuideId = guide.Id, DestinationId = dest.Id, CategoryId = cat.Id,
-                Title = "Galle Fort Walking Tour", Description = "Explore the Dutch ramparts.",
-                BasePrice = 45m, DurationHours = 3, MaxCapacity = 12, Status = ExperienceStatus.Approved
-            };
+            var dest = new Destination { Id = Guid.NewGuid(), Name = "Galle", ProvinceState = "Southern" };
+            var cat = new Category { Id = Guid.NewGuid(), Name = "Historical" };
+            var user = new User { Id = Guid.NewGuid(), FullName = "Guide", Email = "galle@g.com", PasswordHash = "x", PhoneNumber = "0771", Role = "LocalGuide", IsActive = true };
+            var guide = new LocalGuide { Id = Guid.NewGuid(), UserId = user.Id, User = user, City = "Galle", Status = GuideStatus.Approved };
+            var exp = new Experience { Id = Guid.NewGuid(), GuideId = guide.Id, DestinationId = dest.Id, CategoryId = cat.Id, Title = "Fort Tour", BasePrice = 45, Status = ExperienceStatus.Approved };
 
             db.Destinations.Add(dest);
             db.Categories.Add(cat);
@@ -85,35 +57,25 @@ namespace Backend.Tests
             db.Experiences.Add(exp);
             await db.SaveChangesAsync();
 
-            var loadedExp = await db.Experiences
+            var loaded = await db.Experiences
                 .Include(e => e.Destination)
                 .Include(e => e.Category)
                 .Include(e => e.Guide).ThenInclude(g => g.User)
                 .FirstOrDefaultAsync(e => e.Id == exp.Id);
 
-            Assert.NotNull(loadedExp);
-            Assert.Equal("Galle", loadedExp!.Destination.Name);
-            Assert.Equal("Historical", loadedExp.Category.Name);
-            Assert.Equal("Galle Guide", loadedExp.Guide.User.FullName);
+            Assert.NotNull(loaded);
+            Assert.Equal("Galle", loaded!.Destination.Name);
+            Assert.Equal("Historical", loaded.Category.Name);
+            Assert.Equal("Guide", loaded.Guide.User.FullName);
         }
 
         [Fact]
         public async Task UserDelete_CascadesTo_LocalGuideProfile()
         {
-            using var db = CreateIsolatedContext();
+            using var db = CreateDb();
 
-            var user = new User
-            {
-                Id = Guid.NewGuid(), FullName = "Guide To Delete", Email = "guide.delete@test.com",
-                PasswordHash = "hash", PhoneNumber = "+94773333333", Role = "LocalGuide", IsActive = true
-            };
-
-            var guide = new LocalGuide
-            {
-                Id = Guid.NewGuid(), UserId = user.Id, User = user,
-                Bio = "Temporary Guide", City = "Colombo", Status = GuideStatus.Pending
-            };
-
+            var user = new User { Id = Guid.NewGuid(), FullName = "Delete Guide", Email = "del@g.com", PasswordHash = "x", PhoneNumber = "0771", Role = "LocalGuide", IsActive = true };
+            var guide = new LocalGuide { Id = Guid.NewGuid(), UserId = user.Id, User = user, City = "Colombo", Status = GuideStatus.Pending };
             db.Users.Add(user);
             db.LocalGuides.Add(guide);
             await db.SaveChangesAsync();
@@ -128,7 +90,8 @@ namespace Backend.Tests
         [Fact]
         public void CategoryExperience_Relationship_IsConfiguredWithDeleteBehaviorRestrict()
         {
-            using var db = CreateIsolatedContext();
+            using var db = CreateDb();
+
             var foreignKey = db.Model.FindEntityType(typeof(Experience))
                 ?.GetForeignKeys()
                 .FirstOrDefault(fk => fk.PrincipalEntityType.ClrType == typeof(Category));
@@ -140,21 +103,16 @@ namespace Backend.Tests
         [Fact]
         public async Task SaveChangesAsync_AutomaticallyUpdates_UpdatedAtTimestamp()
         {
-            using var db = CreateIsolatedContext();
+            using var db = CreateDb();
 
-            var dest = new Destination
-            {
-                Name = "Sigiriya", ProvinceState = "Central", Country = "Sri Lanka",
-                Description = "Ancient rock fortress"
-            };
-
+            var dest = new Destination { Name = "Sigiriya", ProvinceState = "Central", Description = "Fortress" };
             db.Destinations.Add(dest);
             await db.SaveChangesAsync();
 
             var initialUpdatedAt = dest.UpdatedAt;
             await Task.Delay(20);
 
-            dest.Description = "World heritage ancient rock fortress.";
+            dest.Description = "Updated fortress description";
             await db.SaveChangesAsync();
 
             var updatedDest = await db.Destinations.FindAsync(dest.Id);
