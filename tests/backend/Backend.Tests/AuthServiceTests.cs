@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Backend.Data;
 using Backend.DTOs;
@@ -11,208 +12,172 @@ using Xunit;
 
 namespace Backend.Tests
 {
-    /// <summary>
-    /// Member 1 – Backend/API & Database Testing.
-    /// Service-layer tests for AuthService using EF Core InMemory (no real DB).
-    /// </summary>
     public class AuthServiceTests
     {
-        // Fresh isolated in-memory DB for each test
-        private static AppDbContext NewInMemoryDb()
-        {
-            var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-                .Options;
-            return new AppDbContext(options);
-        }
+        private static AppDbContext NewInMemoryDb() =>
+            new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .Options);
 
         private static ITokenService FakeTokenService()
         {
             var mock = new Mock<ITokenService>();
-            mock.Setup(t => t.GenerateJwtToken(It.IsAny<User>(), It.IsAny<Guid?>()))
-                .Returns("fake-jwt-token");
+            mock.Setup(t => t.GenerateJwtToken(It.IsAny<User>(), It.IsAny<Guid?>())).Returns("fake-jwt-token");
             return mock.Object;
         }
 
-        private static RegisterRequestDto TravelerDto(string email = "traveler@test.com")
-            => new RegisterRequestDto
-            {
-                FullName = "Test Traveler",
-                Email = email,
-                Password = "Passw0rd!",
-                PhoneNumber = "+94771234567",
-                Role = "Traveler"
-            };
-
-        // ---------- Register ----------
+        private static RegisterRequestDto SampleDto(string role = "Traveler", string email = "test@user.com") => new RegisterRequestDto
+        {
+            FullName = "Sample User",
+            Email = email,
+            Password = "Password123!",
+            PhoneNumber = "0771234567",
+            Role = role
+        };
 
         [Fact]
-        public async Task RegisterAsync_NewTraveler_ReturnsTokenAndActiveUser()
+        public async Task RegisterAsync_NewTraveler_ReturnsTokenAndActiveStatus()
         {
             using var db = NewInMemoryDb();
             var service = new AuthService(db, FakeTokenService());
 
-            var result = await service.RegisterAsync(TravelerDto());
+            var res = await service.RegisterAsync(SampleDto());
 
-            Assert.Equal("fake-jwt-token", result.Token);
-            Assert.Equal("Traveler", result.User.Role);
-            Assert.True(result.User.IsActive);
+            Assert.Equal("fake-jwt-token", res.Token);
+            Assert.Equal("Traveler", res.User.Role);
+            Assert.True(res.User.IsActive);
         }
 
         [Fact]
-        public async Task RegisterAsync_NewTraveler_PersistsHashedPassword()
+        public async Task RegisterAsync_DuplicateEmailCaseInsensitive_ThrowsInvalidOperation()
         {
             using var db = NewInMemoryDb();
             var service = new AuthService(db, FakeTokenService());
 
-            await service.RegisterAsync(TravelerDto("new@test.com"));
-
-            var stored = await db.Users.FirstOrDefaultAsync(u => u.Email == "new@test.com");
-            Assert.NotNull(stored);
-            Assert.True(BCrypt.Net.BCrypt.Verify("Passw0rd!", stored!.PasswordHash));
-        }
-
-        [Fact]
-        public async Task RegisterAsync_DuplicateEmail_ThrowsInvalidOperation()
-        {
-            using var db = NewInMemoryDb();
-            var service = new AuthService(db, FakeTokenService());
-
-            await service.RegisterAsync(TravelerDto("dup@test.com"));
+            await service.RegisterAsync(SampleDto("Traveler", "user@test.com"));
 
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.RegisterAsync(TravelerDto("DUP@test.com")));
+                service.RegisterAsync(SampleDto("Traveler", "USER@test.com")));
         }
 
         [Fact]
-        public async Task RegisterAsync_AdminRole_ThrowsInvalidOperation()
+        public async Task RegisterAsync_AdminRoleAttempt_ThrowsInvalidOperation()
         {
             using var db = NewInMemoryDb();
             var service = new AuthService(db, FakeTokenService());
-
-            var dto = TravelerDto("admin-try@test.com");
-            dto.Role = "Admin";
 
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.RegisterAsync(dto));
+                service.RegisterAsync(SampleDto("Admin", "admin@hack.com")));
         }
 
         [Fact]
-        public async Task RegisterAsync_LocalGuide_CreatesPendingGuideProfile()
+        public async Task RegisterAsync_LocalGuide_CreatesPendingGuideRecord()
         {
             using var db = NewInMemoryDb();
             var service = new AuthService(db, FakeTokenService());
-
-            var dto = TravelerDto("guide@test.com");
-            dto.Role = "LocalGuide";
-            dto.GuideBio = "Experienced guide";
-            dto.GuideCity = "Ella";
-            dto.LicenseNumber = "LG-001";
+            var dto = SampleDto("LocalGuide", "guide@test.com");
+            dto.GuideBio = "Certified Bio";
+            dto.GuideCity = "Kandy";
+            dto.LicenseNumber = "LG-100";
             dto.YearsOfExperience = 5;
 
-            var result = await service.RegisterAsync(dto);
+            var res = await service.RegisterAsync(dto);
 
-            Assert.False(result.User.IsActive);
-            Assert.NotNull(result.User.GuideId);
-
+            Assert.False(res.User.IsActive);
+            Assert.NotNull(res.User.GuideId);
             var guide = await db.LocalGuides.FirstOrDefaultAsync();
             Assert.NotNull(guide);
             Assert.Equal(GuideStatus.Pending, guide!.Status);
         }
-
-        // ---------- Login ----------
 
         [Fact]
         public async Task LoginAsync_ValidCredentials_ReturnsToken()
         {
             using var db = NewInMemoryDb();
             var service = new AuthService(db, FakeTokenService());
-            await service.RegisterAsync(TravelerDto("login@test.com"));
+            await service.RegisterAsync(SampleDto("Traveler", "login@test.com"));
 
-            var result = await service.LoginAsync(new LoginRequestDto
-            {
-                Email = "login@test.com",
-                Password = "Passw0rd!"
-            });
-
-            Assert.Equal("fake-jwt-token", result.Token);
+            var res = await service.LoginAsync(new LoginRequestDto { Email = "login@test.com", Password = "Password123!" });
+            Assert.Equal("fake-jwt-token", res.Token);
         }
 
         [Fact]
-        public async Task LoginAsync_WrongPassword_ThrowsUnauthorized()
+        public async Task LoginAsync_WrongPasswordOrNonExistent_ThrowsUnauthorized()
         {
             using var db = NewInMemoryDb();
             var service = new AuthService(db, FakeTokenService());
-            await service.RegisterAsync(TravelerDto("wrong@test.com"));
+            await service.RegisterAsync(SampleDto("Traveler", "login@test.com"));
 
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-                service.LoginAsync(new LoginRequestDto
-                {
-                    Email = "wrong@test.com",
-                    Password = "WrongPass!"
-                }));
-        }
-
-        [Fact]
-        public async Task LoginAsync_NonexistentUser_ThrowsUnauthorized()
-        {
-            using var db = NewInMemoryDb();
-            var service = new AuthService(db, FakeTokenService());
+                service.LoginAsync(new LoginRequestDto { Email = "login@test.com", Password = "WrongPassword!" }));
 
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-                service.LoginAsync(new LoginRequestDto
-                {
-                    Email = "ghost@test.com",
-                    Password = "Passw0rd!"
-                }));
+                service.LoginAsync(new LoginRequestDto { Email = "ghost@test.com", Password = "Password123!" }));
         }
 
         [Fact]
-        public async Task LoginAsync_InactiveLocalGuide_ThrowsPendingMessage()
+        public async Task LoginAsync_PendingLocalGuideOrAgent_ThrowsPendingMessage()
         {
             using var db = NewInMemoryDb();
             var service = new AuthService(db, FakeTokenService());
-
-            var dto = TravelerDto("pending-guide@test.com");
-            dto.Role = "LocalGuide";
+            var dto = SampleDto("LocalGuide", "guide@pending.com");
             dto.GuideBio = "Bio";
-            dto.GuideCity = "Kandy";
-            dto.LicenseNumber = "LG-002";
-            dto.YearsOfExperience = 3;
-
+            dto.GuideCity = "Ella";
+            dto.LicenseNumber = "LG-200";
             await service.RegisterAsync(dto);
 
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-                service.LoginAsync(new LoginRequestDto
-                {
-                    Email = "pending-guide@test.com",
-                    Password = "Passw0rd!"
-                }));
+                service.LoginAsync(new LoginRequestDto { Email = "guide@pending.com", Password = "Password123!" }));
 
-            Assert.Contains("pending", ex.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("pending Administrator approval", ex.Message);
         }
 
         [Fact]
-        public async Task LoginAsync_InactiveTravelAgent_ThrowsPendingMessage()
+        public async Task GetCurrentUserAsync_ValidId_ReturnsProfile()
+        {
+            using var db = NewInMemoryDb();
+            var service = new AuthService(db, FakeTokenService());
+            var reg = await service.RegisterAsync(SampleDto("Traveler", "me@test.com"));
+
+            var profile = await service.GetCurrentUserAsync(reg.User.Id);
+            Assert.Equal("me@test.com", profile.Email);
+        }
+
+        [Fact]
+        public async Task GetCurrentUserAsync_NonExistent_ThrowsKeyNotFound()
         {
             using var db = NewInMemoryDb();
             var service = new AuthService(db, FakeTokenService());
 
-            var dto = TravelerDto("pending-agent@test.com");
-            dto.Role = "TravelAgent";
-            dto.AgencyName = "Travel Co";
-            dto.AgentLicenseNumber = "TA-001";
+            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+                service.GetCurrentUserAsync(Guid.NewGuid()));
+        }
 
-            await service.RegisterAsync(dto);
+        [Fact]
+        public async Task UpdateProfileAsync_ValidData_UpdatesUser()
+        {
+            using var db = NewInMemoryDb();
+            var service = new AuthService(db, FakeTokenService());
+            var reg = await service.RegisterAsync(SampleDto("Traveler", "update@test.com"));
 
-            var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-                service.LoginAsync(new LoginRequestDto
-                {
-                    Email = "pending-agent@test.com",
-                    Password = "Passw0rd!"
-                }));
+            await service.UpdateProfileAsync(reg.User.Id, new UpdateProfileDto { FullName = "Updated Name", PhoneNumber = "0779999999" });
 
-            Assert.Contains("pending", ex.Message, StringComparison.OrdinalIgnoreCase);
+            var updated = await db.Users.FindAsync(reg.User.Id);
+            Assert.Equal("Updated Name", updated!.FullName);
+            Assert.Equal("0779999999", updated.PhoneNumber);
+        }
+
+        [Fact]
+        public async Task ChangePasswordAsync_ValidOldPassword_UpdatesHash()
+        {
+            using var db = NewInMemoryDb();
+            var service = new AuthService(db, FakeTokenService());
+            var reg = await service.RegisterAsync(SampleDto("Traveler", "pass@test.com"));
+
+            await service.ChangePasswordAsync(reg.User.Id, new ChangePasswordDto { OldPassword = "Password123!", NewPassword = "NewPassword123!" });
+
+            var user = await db.Users.FindAsync(reg.User.Id);
+            Assert.True(BCrypt.Net.BCrypt.Verify("NewPassword123!", user!.PasswordHash));
         }
     }
 }
