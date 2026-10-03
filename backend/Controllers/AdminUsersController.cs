@@ -264,5 +264,43 @@ namespace Backend.Controllers
 
             return Ok(new { message = "Travel Agent account deleted successfully." });
         }
+        /// <summary>
+        /// Admin permanently deletes a Traveler account and cleans up all related trips, bookings, payments, and reviews.
+        /// </summary>
+        [HttpDelete("travelers/{id:guid}")]
+        public async Task<IActionResult> DeleteTraveler(Guid id)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == id && u.Role == "Traveler");
+
+            if (user == null)
+            {
+                return NotFound(new { message = "Traveler not found." });
+            }
+
+            // 1. Delete all reviews written by this traveler
+            var reviews = await _context.Reviews
+                .Where(r => r.TravelerId == id)
+                .ToListAsync();
+            _context.Reviews.RemoveRange(reviews);
+
+            // 2. Delete all bookings placed by this traveler (cascades to payments)
+            var bookings = await _context.Bookings
+                .Where(b => b.TravelerId == id)
+                .ToListAsync();
+            _context.Bookings.RemoveRange(bookings);
+
+            // 3. Delete all trips created by this traveler (cascades to trip stops and workflows)
+            var trips = await _context.Trips
+                .Where(t => t.TravelerId == id)
+                .ToListAsync();
+            _context.Trips.RemoveRange(trips);
+
+            // 4. Delete traveler user account
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Traveler account and all associated data deleted successfully." });
+        }
     }
 }
