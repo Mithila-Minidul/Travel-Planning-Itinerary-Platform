@@ -195,6 +195,30 @@ const AdminDashboard = () => {
     .slice(0, 3);
   const adminApprovedExperiences = adminData.experiences.filter((experience) => experience.status === 'Approved').length;
 
+    // 👇 Revenue calculations — MUST come before adminStatCards
+  const totalRevenue = bookings
+    .filter((b) =>
+      ['Succeeded', 'PartiallyRefunded', 'Refunded'].includes(b.paymentStatus)
+    )
+    .reduce((sum, b) => {
+      const paid = Number(b.paymentAmount) || 0;
+      const refunded = Number(b.refundAmount) || 0;
+      return sum + (paid - refunded);
+    }, 0);
+
+  const now = new Date();
+  const monthlyRevenue = bookings
+    .filter((b) => {
+      if (!['Succeeded', 'PartiallyRefunded', 'Refunded'].includes(b.paymentStatus)) return false;
+      const d = new Date(b.createdAt);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    })
+    .reduce((sum, b) => {
+      const paid = Number(b.paymentAmount) || 0;
+      const refunded = Number(b.refundAmount) || 0;
+      return sum + (paid - refunded);
+    }, 0);
+
   const adminStatCards = [
     { 
       label: 'Registered Users', 
@@ -204,7 +228,13 @@ const AdminDashboard = () => {
       color: 'bg-indigo-600' 
     },
     { label: 'Bookings', value: bookingsCount, detail: `Pending: ${pendingBookingsCount}`, icon: <BookOnline />, color: 'bg-amber-500' },
-    { label: 'Revenue', value: '$0', detail: 'This month', icon: <AttachMoney />, color: 'bg-emerald-600' },
+    {
+      label: 'Monthly Revenue',
+      value: `$${monthlyRevenue.toFixed(2)}`,
+      detail: `All-time: $${totalRevenue.toFixed(2)}`,
+      icon: <AttachMoney />,
+      color: 'bg-emerald-600'
+    },
     { label: 'Experiences', value: adminApprovedExperiences, detail: `${adminData.destinations.length} destinations`, icon: <Tour />, color: 'bg-sky-600' },
   ];
 
@@ -246,6 +276,48 @@ const AdminDashboard = () => {
       }))
       .sort((a, b) => b.total - a.total);
   })();
+
+    // 👇 Revenue trend — last 6 months of net revenue
+  const revenueTrendData = (() => {
+    const now = new Date();
+    const months = [];
+
+    // Build the last 6 months (including current)
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        key: `${d.getFullYear()}-${d.getMonth()}`,
+        label: d.toLocaleString('en-US', { month: 'short' }),
+        year: d.getFullYear(),
+        month: d.getMonth(),
+        revenue: 0,
+        bookings: 0,
+      });
+    }
+
+    // Aggregate successful payments into the right month bucket
+    bookings.forEach((b) => {
+      const isPaid = ['Succeeded', 'PartiallyRefunded', 'Refunded'].includes(b.paymentStatus);
+      if (!isPaid) return;
+
+      const dateStr = b.paidAt || b.createdAt;
+      const d = new Date(dateStr);
+      const bucket = months.find(
+        (m) => m.year === d.getFullYear() && m.month === d.getMonth()
+      );
+      if (!bucket) return;
+
+      const paid = Number(b.paymentAmount) || 0;
+      const refunded = Number(b.refundAmount) || 0;
+      bucket.revenue += paid - refunded;
+      bucket.bookings += 1;
+    });
+
+    return months;
+  })();
+
+  // Total across the 6 months, for the header text
+  const revenue6MoTotal = revenueTrendData.reduce((s, m) => s + m.revenue, 0);
 
   if (loading) return <div className="flex justify-center items-center h-64">Loading dashboard...</div>;
 
@@ -297,10 +369,47 @@ const AdminDashboard = () => {
           <div className="rounded-xl border bg-white p-6 shadow-sm">
             <div className="mb-5 flex items-center gap-2">
               <BarChart className="text-indigo-600" />
-              <div><h2 className="font-semibold text-slate-900">Revenue Trend</h2><p className="text-xs text-slate-400">No payment data yet</p></div>
+              <div>
+                <h2 className="font-semibold text-slate-900">Revenue Trend</h2>
+                <p className="text-xs text-slate-400">
+                  {revenue6MoTotal > 0
+                    ? `$${revenue6MoTotal.toFixed(2)} over the last 6 months`
+                    : 'No payment data yet'}
+                </p>
+              </div>
             </div>
-            <div className="flex h-36 items-end gap-3 border-b border-l border-slate-200 px-3 pb-0 pt-4">
-              {[28, 42, 34, 58, 45, 68].map((height, index) => <div key={index} className="flex-1 rounded-t bg-indigo-200" style={{ height: `${height}%` }} />)}
+            <div style={{ width: '100%', height: 240 }}>
+              <ResponsiveContainer>
+                <RechartsBarChart
+                  data={revenueTrendData}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: '#334155' }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tickFormatter={(v) => `$${v}`}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(79, 70, 229, 0.06)' }}
+                    formatter={(value, name, props) => [
+                      `$${Number(value).toFixed(2)} (${props.payload.bookings} booking${props.payload.bookings === 1 ? '' : 's'})`,
+                      'Revenue',
+                    ]}
+                  />
+                  <Bar dataKey="revenue" radius={[6, 6, 0, 0]} maxBarSize={50}>
+                    {revenueTrendData.map((_, index) => (
+                      <Cell
+                        key={index}
+                        fill="#4f46e5"
+                      />
+                    ))}
+                  </Bar>
+                </RechartsBarChart>
+              </ResponsiveContainer>
             </div>
           </div>
                     <div className="rounded-xl border bg-white p-6 shadow-sm">
