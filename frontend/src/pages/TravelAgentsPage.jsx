@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminUserAPI } from '../api/adminUsers';
 import { useAuth } from '../context/AuthContext';
-import { Person, Check, Close, Email, Phone, Business, Badge } from '@mui/icons-material';
+import { Person, Check, Close, Email, Phone, Business, Badge, Delete } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 
 const TravelAgentsPage = () => {
@@ -33,6 +33,19 @@ const TravelAgentsPage = () => {
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error(error.response?.data?.message || 'Failed to update status.');
+    }
+  };
+
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Are you sure you want to permanently delete the travel agent "${name}"? This action cannot be undone.`)) {
+      try {
+        await adminUserAPI.deleteTravelAgent(id);
+        toast.success('Travel Agent deleted successfully.');
+        fetchAgents();
+      } catch (error) {
+        console.error('Error deleting travel agent:', error);
+        toast.error(error.response?.data?.message || 'Failed to delete travel agent.');
+      }
     }
   };
 
@@ -134,6 +147,13 @@ const TravelAgentsPage = () => {
                   >
                     <Close fontSize="small" /> Reject
                   </button>
+                  <button
+                    onClick={() => handleDelete(agent.id, agent.fullName)}
+                    className="bg-gray-700 text-white px-3 py-2 rounded-lg flex items-center gap-1 hover:bg-gray-800 transition"
+                    title="Delete Travel Agent"
+                  >
+                    <Delete fontSize="small" /> Delete
+                  </button>
                 </div>
               </div>
             ))}
@@ -176,6 +196,16 @@ const TravelAgentsPage = () => {
                   <div className="mt-3 border-t border-gray-100 pt-3">
                     <AgentDetails agent={agent} />
                   </div>
+                  {isAdmin && (
+                    <div className="mt-3 border-t border-gray-100 pt-2 flex justify-end">
+                      <button
+                        onClick={() => handleDelete(agent.id, agent.fullName)}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded-md flex items-center gap-1 transition text-xs font-medium"
+                      >
+                        <Delete fontSize="small" /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -209,6 +239,16 @@ const TravelAgentsPage = () => {
                   <div className="mt-3 border-t border-gray-100 pt-3">
                     <AgentDetails agent={agent} />
                   </div>
+                  {isAdmin && (
+                    <div className="mt-3 border-t border-rose-100 pt-2 flex justify-end">
+                      <button
+                        onClick={() => handleDelete(agent.id, agent.fullName)}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded-md flex items-center gap-1 transition text-xs font-medium"
+                      >
+                        <Delete fontSize="small" /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

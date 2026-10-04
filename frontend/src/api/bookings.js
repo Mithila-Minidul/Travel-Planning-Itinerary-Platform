@@ -12,4 +12,5 @@ export const bookingAPI = {
   checkInByCode: (confirmationCode) =>
     apiClient.post('/Bookings/check-in-by-code', { confirmationCode }),
   getEarnings: () => apiClient.get('/Bookings/earnings'), // 👈 ADD THIS
+  delete: (id) => apiClient.delete(`/Bookings/${id}`), 
 };

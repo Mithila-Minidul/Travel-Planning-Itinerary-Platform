@@ -101,4 +101,22 @@ class BookingService {
       return 'Request failed';
     }
   }
+  // ================= DELETE BOOKING =================
+  static Future<void> deleteBooking(String id) async {
+    final token = await _getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/Bookings/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return;
+    }
+
+    final err = _tryParseError(response.body);
+    throw Exception(err);
+  }
 }

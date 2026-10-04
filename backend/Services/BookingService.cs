@@ -290,5 +290,42 @@ namespace Backend.Services
             for (int i = 0; i < 6; i++) code[i] = chars[rnd.Next(chars.Length)];
             return $"TC-{new string(code)}";
         }
+        // ---------- Delete Booking (Admin or Traveler Owner) ----------
+        public async Task DeleteAsync(Guid id, Guid? userId = null, string? role = null)
+        {
+            var booking = await _context.Bookings
+                .Include(b => b.Payment)
+                .FirstOrDefaultAsync(b => b.Id == id)
+                ?? throw new KeyNotFoundException("Booking not found.");
+
+            // If traveler, ensure they own this booking
+            if (role == "Traveler" && userId.HasValue && booking.TravelerId != userId.Value)
+            {
+                throw new UnauthorizedAccessException("Not your booking.");
+            }
+
+            // Enforce business rule: Pending bookings cannot be deleted
+            if (booking.Status == "Pending")
+            {
+                throw new InvalidOperationException("Pending bookings cannot be deleted. Only Confirmed, Completed, or Cancelled bookings can be deleted.");
+            }
+
+            // 1. Delete associated reviews if any
+            var reviews = await _context.Reviews
+                .Where(r => r.BookingId == id)
+                .ToListAsync();
+            _context.Reviews.RemoveRange(reviews);
+
+            // 2. Delete associated payment if any
+            if (booking.Payment != null)
+            {
+                _context.Payments.Remove(booking.Payment);
+            }
+
+            // 3. Delete booking
+            _context.Bookings.Remove(booking);
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

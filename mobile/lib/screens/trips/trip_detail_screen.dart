@@ -612,6 +612,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   Widget _buildGuideCard(dynamic trip) {
     final guideName = (trip['guideName'] ?? '').toString();
     final guideCity = (trip['guideCity'] ?? '').toString();
+    final guideImageUrl = (trip['guideProfileImageUrl'] ?? '').toString().trim();
     final initial = guideName.isNotEmpty ? guideName[0].toUpperCase() : '?';
 
     return Container(
@@ -626,16 +627,40 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: const Color(0xFF4F46E5),
-            child: Text(
-              initial,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
+          // 👇 Guide profile photo with letter fallback
+          ClipOval(
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: guideImageUrl.isNotEmpty
+                  ? Image.network(
+                      guideImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: const Color(0xFF4F46E5),
+                        alignment: Alignment.center,
+                        child: Text(
+                          initial,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: const Color(0xFF4F46E5),
+                      alignment: Alignment.center,
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 12),

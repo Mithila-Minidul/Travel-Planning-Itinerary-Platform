@@ -41,5 +41,24 @@ namespace Backend.Controllers
 
             return Ok(await _guideService.GetMyStatsAsync(userId));
         }
+        // 👇 ADDED: Delete guide account
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> DeleteGuide(Guid id)
+        {
+            try
+            {
+                await _guideService.DeleteGuideAsync(id);
+                return Ok(new { message = "Guide account and all related data deleted successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while deleting the guide.", details = ex.Message });
+            }
+        }
     }
 }

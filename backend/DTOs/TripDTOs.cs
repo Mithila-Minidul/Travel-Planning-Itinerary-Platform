@@ -98,6 +98,7 @@ namespace Backend.DTOs
         public Guid? GuideId { get; set; }
         public string? GuideName { get; set; }
         public string? GuideCity { get; set; }
+        public string? GuideProfileImageUrl { get; set; }  
 
         // ============================================================
         // ✅ NEW: Trip Builder Redesign Fields (response)

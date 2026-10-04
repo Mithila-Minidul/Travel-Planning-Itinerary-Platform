@@ -69,6 +69,9 @@ namespace Backend.Controllers
                     GuideId = t.GuideId,
                     GuideName = t.Guide != null && t.Guide.User != null ? t.Guide.User.FullName : null,
                     GuideCity = t.Guide != null ? t.Guide.City : null,
+                    GuideProfileImageUrl = t.Guide != null && t.Guide.User != null
+                        ? t.Guide.User.ProfileImageUrl
+                        : null,   
                     TravelGroup = t.TravelGroup,
                     NumberOfTravelers = t.NumberOfTravelers,
                     BudgetTier = t.BudgetTier,
@@ -76,7 +79,7 @@ namespace Backend.Controllers
                     PreferredTimes = t.PreferredTimes,
                     SpecialRequests = t.SpecialRequests,
                     AiErrors = t.AiErrors,
-                    RejectionReason = t.RejectionReason,   // 👈 ADDED
+                    RejectionReason = t.RejectionReason,   
                     TotalEstimatedCost = t.TripStops.Sum(s => s.EstimatedCost)
                         * (t.NumberOfTravelers <= 0 ? 1 : t.NumberOfTravelers),
                     CreatedAt = t.CreatedAt,
@@ -150,6 +153,7 @@ namespace Backend.Controllers
                 GuideId = trip.GuideId,
                 GuideName = trip.Guide?.User?.FullName,
                 GuideCity = trip.Guide?.City,
+                GuideProfileImageUrl = trip.Guide?.User?.ProfileImageUrl, 
                 TravelGroup = trip.TravelGroup,
                 NumberOfTravelers = trip.NumberOfTravelers,
                 BudgetTier = trip.BudgetTier,
@@ -210,6 +214,9 @@ namespace Backend.Controllers
 
             var tripId = Guid.NewGuid();
 
+            // 👇 Capture the workflow start time BEFORE calling Python
+            var workflowStartTime = DateTime.UtcNow;
+
             // Call Python AI service (Planner → Research → Budget → Approval)
             var plannerResult = await _plannerAgent.GenerateItineraryAsync(
                 tripId: tripId,
@@ -254,7 +261,7 @@ namespace Backend.Controllers
             };
 
             // ---- Build AgentWorkflow + AgentExecutionLogs ----
-            var workflow = BuildAgentWorkflow(tripId, request.Objective, plannerResult);
+            var workflow = BuildAgentWorkflow(tripId, request.Objective, plannerResult, workflowStartTime);
 
             _context.Trips.Add(trip);
             _context.AgentWorkflows.Add(workflow);
@@ -284,7 +291,8 @@ namespace Backend.Controllers
         private static AgentWorkflow BuildAgentWorkflow(
             Guid tripId,
             string? objective,
-            PlannerResult plannerResult)
+            PlannerResult plannerResult,
+            DateTime workflowStartTime)
         {
             var workflow = new AgentWorkflow
             {
@@ -299,7 +307,7 @@ namespace Backend.Controllers
                 WinningGuideName = plannerResult.WinningGuideName
             };
 
-            DateTime? previous = null;
+            DateTime? previous = workflowStartTime;
             int seq = 1;
             foreach (var entry in plannerResult.ExecutionLog)
             {
@@ -391,5 +399,57 @@ namespace Backend.Controllers
 
             return Ok(new { message = $"Trip successfully {request.Status}.", tripId = trip.Id });
         }
+        // ============================================================
+        // DELETE: api/Trips/{id}
+        // Admin or Traveler owner — Only Approved or Rejected trips
+        // ============================================================
+        [Authorize(Roles = "Admin, Traveler")]
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> DeleteTrip(Guid id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            var trip = await _context.Trips.FirstOrDefaultAsync(t => t.Id == id);
+            if (trip == null) return NotFound(new { message = "Trip not found." });
+
+            // Ensure travelers can only delete their own trips
+            if (userRole == "Traveler" && trip.TravelerId.ToString() != userIdClaim)
+            {
+                return Forbid();
+            }
+
+            // Pending trips cannot be deleted
+            if (trip.Status == "Pending")
+            {
+                return BadRequest(new { message = "Pending trips cannot be deleted. Only Approved or Rejected trips can be deleted." });
+            }
+
+            // 1. Delete all bookings and reviews related to this trip
+            var bookings = await _context.Bookings.Where(b => b.TripId == id).ToListAsync();
+            if (bookings.Any())
+            {
+                var bookingIds = bookings.Select(b => b.Id).ToList();
+                var reviews = await _context.Reviews.Where(r => bookingIds.Contains(r.BookingId)).ToListAsync();
+                _context.Reviews.RemoveRange(reviews);
+                _context.Bookings.RemoveRange(bookings);
+            }
+
+            // 2. Delete agent workflows (cascades to execution logs)
+            var workflows = await _context.AgentWorkflows.Where(w => w.TripId == id).ToListAsync();
+            _context.AgentWorkflows.RemoveRange(workflows);
+
+            // 3. Delete trip stops
+            var stops = await _context.TripStops.Where(s => s.TripId == id).ToListAsync();
+            _context.TripStops.RemoveRange(stops);
+
+            // 4. Delete the trip entity
+            _context.Trips.Remove(trip);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Trip and all associated data deleted successfully." });
+        }
+    
     }
 }

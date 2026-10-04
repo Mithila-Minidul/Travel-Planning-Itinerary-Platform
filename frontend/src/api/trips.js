@@ -5,4 +5,5 @@ export const tripAPI = {
   getTripById: (id) => apiClient.get(`/Trips/${id}`),
   createTrip: (data) => apiClient.post('/Trips', data),
   reviewTrip: (id, data) => apiClient.patch(`/Trips/${id}/review`, data),
+  deleteTrip: (id) => apiClient.delete(`/Trips/${id}`),
 };
