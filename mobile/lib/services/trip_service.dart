@@ -98,4 +98,26 @@ class TripService {
       throw Exception('Failed to create trip (${response.statusCode})');
     }
   }
+  // ================= DELETE TRIP =================
+  static Future<void> deleteTrip(String id) async {
+    final token = await _getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/Trips/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return;
+    }
+
+    try {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Failed to delete trip');
+    } catch (_) {
+      throw Exception('Failed to delete trip (${response.statusCode})');
+    }
+  }
 }
