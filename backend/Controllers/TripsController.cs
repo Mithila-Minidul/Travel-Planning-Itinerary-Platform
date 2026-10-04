@@ -214,6 +214,9 @@ namespace Backend.Controllers
 
             var tripId = Guid.NewGuid();
 
+            // 👇 Capture the workflow start time BEFORE calling Python
+            var workflowStartTime = DateTime.UtcNow;
+
             // Call Python AI service (Planner → Research → Budget → Approval)
             var plannerResult = await _plannerAgent.GenerateItineraryAsync(
                 tripId: tripId,
@@ -258,7 +261,7 @@ namespace Backend.Controllers
             };
 
             // ---- Build AgentWorkflow + AgentExecutionLogs ----
-            var workflow = BuildAgentWorkflow(tripId, request.Objective, plannerResult);
+            var workflow = BuildAgentWorkflow(tripId, request.Objective, plannerResult, workflowStartTime);
 
             _context.Trips.Add(trip);
             _context.AgentWorkflows.Add(workflow);
@@ -288,7 +291,8 @@ namespace Backend.Controllers
         private static AgentWorkflow BuildAgentWorkflow(
             Guid tripId,
             string? objective,
-            PlannerResult plannerResult)
+            PlannerResult plannerResult,
+            DateTime workflowStartTime)
         {
             var workflow = new AgentWorkflow
             {
@@ -303,7 +307,7 @@ namespace Backend.Controllers
                 WinningGuideName = plannerResult.WinningGuideName
             };
 
-            DateTime? previous = null;
+            DateTime? previous = workflowStartTime;
             int seq = 1;
             foreach (var entry in plannerResult.ExecutionLog)
             {
