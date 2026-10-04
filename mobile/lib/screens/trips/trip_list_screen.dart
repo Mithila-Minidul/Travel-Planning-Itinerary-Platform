@@ -68,6 +68,55 @@ class _TripListScreenState extends State<TripListScreen> {
     return _allTrips.where((t) => (t['status'] ?? '') == status).length;
   }
 
+  Future<void> _confirmDelete(dynamic trip) async {
+    final tripId = trip['id']?.toString() ?? '';
+    final title = trip['title'] ?? 'this trip';
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Trip'),
+        content: Text('Are you sure you want to permanently delete "$title"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await TripService.deleteTrip(tripId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Trip deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        _loadTrips();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceAll('Exception: ', '')),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -214,6 +263,7 @@ class _TripListScreenState extends State<TripListScreen> {
     final numberOfTravelers = trip['numberOfTravelers'] ?? 1;
     final travelPace = (trip['travelPace'] ?? '').toString();
     final budgetTier = (trip['budgetTier'] ?? '').toString();
+    final canDelete = status == 'Approved' || status == 'Rejected';
 
     return Card(
       elevation: 1,
@@ -235,7 +285,7 @@ class _TripListScreenState extends State<TripListScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ============ TITLE + STATUS ============
+              // ============ TITLE + STATUS + DELETE ============
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -268,6 +318,17 @@ class _TripListScreenState extends State<TripListScreen> {
                       ),
                     ),
                   ),
+                  if (canDelete) ...[
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      splashRadius: 18,
+                      tooltip: 'Delete Trip',
+                      onPressed: () => _confirmDelete(trip),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 8),
