@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../utils/constants.dart';
 import '../../services/api_client.dart';
@@ -213,11 +212,16 @@ class ProfileScreen extends StatelessWidget {
   }
 
   // ===================== EDIT PROFILE MODAL =====================
-    void _showEditProfile(BuildContext context, AuthProvider auth) {
+  void _showEditProfile(BuildContext context, AuthProvider auth) {
     final nameController = TextEditingController(text: auth.user?.fullName ?? '');
     final phoneController = TextEditingController(text: auth.user?.phoneNumber ?? '');
     String? pickedImageUrl = auth.user?.profileImageUrl;
     bool uploading = false;
+    String? phoneError;
+    String? nameError;
+
+    // Sri Lankan Mobile Regex: 07XXXXXXXX, +947XXXXXXXX, or 947XXXXXXXX
+    final slPhoneRegex = RegExp(r'^(?:0|94|\+94)?7[0-8]\d{7}$');
 
     showModalBottomSheet(
       context: context,
@@ -346,20 +350,29 @@ class ProfileScreen extends StatelessWidget {
                 // ================= NAME =================
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(
+                  onChanged: (_) {
+                    if (nameError != null) setModalState(() => nameError = null);
+                  },
+                  decoration: InputDecoration(
                     labelText: 'Full Name',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    errorText: nameError,
                   ),
                 ),
                 const SizedBox(height: 14),
 
-                // ================= PHONE =================
+                // ================= PHONE (SRI LANKA VALIDATION) =================
                 TextField(
                   controller: phoneController,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
+                  onChanged: (_) {
+                    if (phoneError != null) setModalState(() => phoneError = null);
+                  },
+                  decoration: InputDecoration(
                     labelText: 'Phone Number',
-                    border: OutlineInputBorder(),
+                    hintText: 'e.g. 0714568923 or +94714568923',
+                    border: const OutlineInputBorder(),
+                    errorText: phoneError,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -371,13 +384,26 @@ class ProfileScreen extends StatelessWidget {
                     onPressed: uploading
                         ? null
                         : () async {
-                            if (nameController.text.trim().isEmpty) return;
+                            final name = nameController.text.trim();
+                            final phone = phoneController.text.trim();
+
+                            // 1. Name validation
+                            if (name.isEmpty) {
+                              setModalState(() => nameError = 'Full name is required');
+                              return;
+                            }
+
+                            // 2. Sri Lanka mobile number validation
+                            if (phone.isNotEmpty && !slPhoneRegex.hasMatch(phone)) {
+                              setModalState(() => phoneError =
+                                  'Enter a valid Sri Lankan mobile number (e.g. 07XXXXXXXX or +947XXXXXXXX)');
+                              return;
+                            }
+
                             Navigator.pop(ctx);
                             final ok = await auth.updateProfile(
-                              fullName: nameController.text.trim(),
-                              phoneNumber: phoneController.text.trim().isEmpty
-                                  ? null
-                                  : phoneController.text.trim(),
+                              fullName: name,
+                              phoneNumber: phone.isEmpty ? null : phone,
                               profileImageUrl: pickedImageUrl,
                             );
                             if (context.mounted) {
@@ -408,7 +434,7 @@ class ProfileScreen extends StatelessWidget {
   }
 
   // ===================== CHANGE PASSWORD MODAL =====================
-    void _showChangePassword(BuildContext context, AuthProvider auth) {
+  void _showChangePassword(BuildContext context, AuthProvider auth) {
     final oldController = TextEditingController();
     final newController = TextEditingController();
 
@@ -461,7 +487,6 @@ class ProfileScreen extends StatelessWidget {
                     return;
                   }
 
-                  // 👇 WARNING DIALOG BEFORE SUBMITTING
                   showDialog(
                     context: context,
                     builder: (confirmCtx) => AlertDialog(
@@ -489,8 +514,8 @@ class ProfileScreen extends StatelessWidget {
                             foregroundColor: Colors.white,
                           ),
                           onPressed: () async {
-                            Navigator.pop(confirmCtx); // close confirm dialog
-                            Navigator.pop(ctx); // close bottom sheet
+                            Navigator.pop(confirmCtx);
+                            Navigator.pop(ctx);
 
                             final ok = await auth.changePassword(
                               oldPassword: oldController.text,
@@ -500,7 +525,6 @@ class ProfileScreen extends StatelessWidget {
                             if (!context.mounted) return;
 
                             if (ok) {
-                              // 👇 AUTO LOGOUT + REDIRECT TO LOGIN
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Password changed! Please login again.'),
