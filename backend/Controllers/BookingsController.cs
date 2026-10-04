@@ -163,18 +163,19 @@ namespace Backend.Controllers
             }
         }
         // ============================================================
-        // DELETE: api/Bookings/{id}   (Admin only)
+        // DELETE: api/Bookings/{id}   (Admin or Traveler Owner)
         // ============================================================
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Traveler")]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
-                await _bookings.DeleteAsync(id);
+                await _bookings.DeleteAsync(id, UserId, Role);
                 return Ok(new { message = "Booking and related records deleted successfully." });
             }
             catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+            catch (UnauthorizedAccessException) { return Forbid(); }
             catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
             catch (Exception ex)
             {
