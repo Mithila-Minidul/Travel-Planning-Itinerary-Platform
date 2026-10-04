@@ -69,6 +69,9 @@ namespace Backend.Controllers
                     GuideId = t.GuideId,
                     GuideName = t.Guide != null && t.Guide.User != null ? t.Guide.User.FullName : null,
                     GuideCity = t.Guide != null ? t.Guide.City : null,
+                    GuideProfileImageUrl = t.Guide != null && t.Guide.User != null
+                        ? t.Guide.User.ProfileImageUrl
+                        : null,   
                     TravelGroup = t.TravelGroup,
                     NumberOfTravelers = t.NumberOfTravelers,
                     BudgetTier = t.BudgetTier,
@@ -76,7 +79,7 @@ namespace Backend.Controllers
                     PreferredTimes = t.PreferredTimes,
                     SpecialRequests = t.SpecialRequests,
                     AiErrors = t.AiErrors,
-                    RejectionReason = t.RejectionReason,   // 👈 ADDED
+                    RejectionReason = t.RejectionReason,   
                     TotalEstimatedCost = t.TripStops.Sum(s => s.EstimatedCost)
                         * (t.NumberOfTravelers <= 0 ? 1 : t.NumberOfTravelers),
                     CreatedAt = t.CreatedAt,
@@ -150,6 +153,7 @@ namespace Backend.Controllers
                 GuideId = trip.GuideId,
                 GuideName = trip.Guide?.User?.FullName,
                 GuideCity = trip.Guide?.City,
+                GuideProfileImageUrl = trip.Guide?.User?.ProfileImageUrl, 
                 TravelGroup = trip.TravelGroup,
                 NumberOfTravelers = trip.NumberOfTravelers,
                 BudgetTier = trip.BudgetTier,
