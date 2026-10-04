@@ -18,6 +18,6 @@ namespace Backend.Interfaces
         Task<BookingResponseDto> CheckInAsync(Guid id, string confirmationCode);
         Task<BookingResponseDto> CheckInByCodeAsync(string confirmationCode);
         Task<decimal> GetTotalEarningsAsync(Guid guideUserId);
-        Task DeleteAsync(Guid id);
+        Task DeleteAsync(Guid id, Guid? userId = null, string? role = null);
     }
 }
