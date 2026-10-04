@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { guideAPI } from '../api/guides';
 import { useAuth } from '../context/AuthContext';
-import { Verified, Person, Check, Close, Email, Phone, LocationOn, Badge } from '@mui/icons-material';
+import { Verified, Person, Check, Close, Email, Phone, LocationOn, Badge, Delete } from '@mui/icons-material';
 
 const GuidesPage = () => {
   const [guides, setGuides] = useState([]);
@@ -30,6 +30,18 @@ const GuidesPage = () => {
       fetchGuides();
     } catch (error) {
       console.error('Error updating status:', error);
+    }
+  };
+
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Are you sure you want to permanently delete the guide "${name}" and all associated data? This action cannot be undone.`)) {
+      try {
+        await guideAPI.delete(id);
+        fetchGuides();
+      } catch (error) {
+        console.error('Error deleting guide:', error);
+        alert('Failed to delete guide.');
+      }
     }
   };
 
@@ -81,7 +93,7 @@ const GuidesPage = () => {
         )}
       </div>
 
-            {/* 👇 Filter tabs */}
+      {/* Filter tabs */}
       <div className="mb-6 flex flex-wrap gap-2">
         {GUIDE_TABS.map((tab) => (
           <button
@@ -127,6 +139,13 @@ const GuidesPage = () => {
                   >
                     <Close fontSize="small" /> Reject
                   </button>
+                  <button
+                    onClick={() => handleDelete(guide.id, guide.fullName)}
+                    className="bg-gray-700 text-white px-3 py-2 rounded-lg flex items-center gap-1 hover:bg-gray-800 transition"
+                    title="Delete Guide Account"
+                  >
+                    <Delete fontSize="small" /> Delete
+                  </button>
                 </div>
               </div>
             ))}
@@ -134,7 +153,7 @@ const GuidesPage = () => {
         </div>
       )}
 
-      {/* 👇 Empty state for Pending tab when nothing to approve */}
+      {/* Empty state for Pending tab */}
       {isAdmin && activeTab === 'Pending' && pendingGuides.length === 0 && (
         <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500 mb-6">
           No pending guides to approve.
@@ -174,6 +193,16 @@ const GuidesPage = () => {
                   <div className="mt-3 border-t border-gray-100 pt-3">
                     <GuideDetails guide={guide} />
                   </div>
+                  {isAdmin && (
+                    <div className="mt-3 border-t border-gray-100 pt-2 flex justify-end">
+                      <button
+                        onClick={() => handleDelete(guide.id, guide.fullName)}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded-md flex items-center gap-1 transition text-xs font-medium"
+                      >
+                        <Delete fontSize="small" /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -207,6 +236,16 @@ const GuidesPage = () => {
                   <div className="mt-3 border-t border-gray-100 pt-3">
                     <GuideDetails guide={guide} />
                   </div>
+                  {isAdmin && (
+                    <div className="mt-3 border-t border-rose-100 pt-2 flex justify-end">
+                      <button
+                        onClick={() => handleDelete(guide.id, guide.fullName)}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded-md flex items-center gap-1 transition text-xs font-medium"
+                      >
+                        <Delete fontSize="small" /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

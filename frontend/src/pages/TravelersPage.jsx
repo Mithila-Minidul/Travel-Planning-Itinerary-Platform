@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminUserAPI } from '../api/adminUsers';
-import { Person, Email, Phone, CheckCircle } from '@mui/icons-material';
+import { Person, Email, Phone, CheckCircle, Delete } from '@mui/icons-material';
+import toast from 'react-hot-toast';
 
 const TravelersPage = () => {
   const [travelers, setTravelers] = useState([]);
@@ -18,6 +19,19 @@ const TravelersPage = () => {
       console.error('Error fetching travelers:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Are you sure you want to permanently delete traveler "${name}" and all associated bookings, trips, and data? This action cannot be undone.`)) {
+      try {
+        await adminUserAPI.deleteTraveler(id);
+        toast?.success ? toast.success('Traveler deleted successfully.') : alert('Traveler deleted successfully.');
+        fetchTravelers();
+      } catch (error) {
+        console.error('Error deleting traveler:', error);
+        toast?.error ? toast.error(error.response?.data?.message || 'Failed to delete traveler.') : alert('Failed to delete traveler.');
+      }
     }
   };
 
@@ -66,6 +80,14 @@ const TravelersPage = () => {
                 <p className="flex items-center gap-1.5"><Email fontSize="inherit" />{traveler.email}</p>
                 <p className="flex items-center gap-1.5"><Phone fontSize="inherit" />{traveler.phoneNumber}</p>
               </div>
+            </div>
+            <div className="mt-3 border-t border-gray-100 pt-2 flex justify-end">
+              <button
+                onClick={() => handleDelete(traveler.id, traveler.fullName)}
+                className="text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1 rounded-md flex items-center gap-1 transition text-xs font-medium"
+              >
+                <Delete fontSize="small" /> Delete
+              </button>
             </div>
           </div>
         ))}

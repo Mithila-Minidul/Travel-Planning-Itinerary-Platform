@@ -13,4 +13,10 @@ export const adminUserAPI = {
 
   // Recent activity feed for dashboard
   getRecentActivity: (limit = 5) => apiClient.get(`/AdminUsers/recent-activity?limit=${limit}`),
+
+  // Permanently deletes a Travel Agent account
+  deleteTravelAgent: (id) => apiClient.delete(`/AdminUsers/travel-agents/${id}`),
+
+  // Permanently deletes a Traveler account
+  deleteTraveler: (id) => apiClient.delete(`/AdminUsers/travelers/${id}`),
 };

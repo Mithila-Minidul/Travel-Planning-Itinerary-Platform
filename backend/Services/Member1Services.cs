@@ -238,6 +238,68 @@ namespace Backend.Services
                 TotalReviews = ratings.Count
             };
         }
+        // 👇 ADDED: Delete guide account and clean up all related dependencies safely
+        public async Task DeleteGuideAsync(Guid id)
+        {
+            var guide = await _context.LocalGuides
+                .Include(g => g.User)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            if (guide == null)
+                throw new KeyNotFoundException("Guide not found.");
+
+            // 1. Find all experiences belonging to this guide
+            var experiences = await _context.Experiences
+                .Where(e => e.GuideId == id)
+                .ToListAsync();
+
+            var expIds = experiences.Select(e => e.Id).ToList();
+
+            // 2. Unlink any trip stops referencing these experiences
+            var tripStops = await _context.TripStops
+                .Where(ts => ts.ExperienceId.HasValue && expIds.Contains(ts.ExperienceId.Value))
+                .ToListAsync();
+            foreach (var stop in tripStops)
+            {
+                stop.ExperienceId = null;
+            }
+
+            // 3. Delete reviews related to these experiences
+            var reviews = await _context.Reviews
+                .Where(r => expIds.Contains(r.ExperienceId))
+                .ToListAsync();
+            _context.Reviews.RemoveRange(reviews);
+
+            // 4. Delete bookings related to this guide or their experiences
+            var bookings = await _context.Bookings
+                .Where(b => b.GuideId == id || expIds.Contains(b.ExperienceId))
+                .ToListAsync();
+            _context.Bookings.RemoveRange(bookings);
+
+            // 5. Unlink guide from any trips
+            var trips = await _context.Trips
+                .Where(t => t.GuideId == id)
+                .ToListAsync();
+            foreach (var trip in trips)
+            {
+                trip.GuideId = null;
+            }
+
+            // 6. Delete all experiences
+            _context.Experiences.RemoveRange(experiences);
+
+            // 7. Delete guide profile and user account
+            var user = guide.User ?? await _context.Users.FirstOrDefaultAsync(u => u.Id == guide.UserId);
+
+            _context.LocalGuides.Remove(guide);
+
+            if (user != null)
+            {
+                _context.Users.Remove(user);
+            }
+
+            await _context.SaveChangesAsync();
+        }
     }
 
     // ================= EXPERIENCE SERVICE (DYNAMIC PRICING ENGINE) =================

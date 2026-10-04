@@ -17,6 +17,7 @@ import {
   Refresh,
   Visibility,
   WarningAmber,
+  Delete,
 } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 
@@ -144,6 +145,20 @@ const BookingsPage = () => {
     }
   };
 
+  const handleDelete = async (b) => {
+    if (!window.confirm(`Are you sure you want to permanently delete booking "${b.confirmationCode}" for "${b.tripTitle}"? This action cannot be undone.`)) return;
+    setActionBusy(b.id);
+    try {
+      await bookingAPI.delete(b.id);
+      toast.success('Booking deleted successfully.');
+      fetchBookings();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to delete booking.');
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
   const filtered = activeTab === 'All'
     ? bookings
     : bookings.filter((b) => b.status === activeTab);
@@ -224,6 +239,7 @@ const BookingsPage = () => {
               onCancel={() => handleCancel(b)}
               onCheckIn={() => { setCheckInBooking(b); setCheckInCode(''); }}
               onDetail={() => navigate(`/bookings/${b.id}`)}
+              onDelete={() => handleDelete(b)}
             />
           ))}
         </div>
@@ -311,10 +327,11 @@ const BookingsPage = () => {
 // ============================================================
 const BookingCard = ({
   b, isAdmin, isGuide, isTraveler, busy,
-  onConfirm, onReject, onPay, onCancel, onCheckIn, onDetail,
+  onConfirm, onReject, onPay, onCancel, onCheckIn, onDetail, onDelete,
 }) => {
   const tripDate = new Date(b.bookingDate).toLocaleDateString();
   const total = Number(b.totalAmount || 0);
+  const canDelete = isAdmin && (b.status === 'Confirmed' || b.status === 'Completed' || b.status === 'Cancelled');
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition">
@@ -380,7 +397,7 @@ const BookingCard = ({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* View Details — always available */}
+          {/* View Details */}
           <button
             onClick={onDetail}
             className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
@@ -434,6 +451,18 @@ const BookingCard = ({
               className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
             >
               <Cancel fontSize="small" /> Cancel
+            </button>
+          )}
+
+          {/* Admin Delete Action (Confirmed, Completed, or Cancelled ONLY) */}
+          {canDelete && (
+            <button
+              disabled={busy}
+              onClick={onDelete}
+              className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+              title="Delete Booking"
+            >
+              <Delete fontSize="small" /> Delete
             </button>
           )}
         </div>

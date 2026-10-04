@@ -158,10 +158,12 @@ const AIPerformancePage = () => {
       agentTimings[n].total += log.elapsedMs || 0;
       agentTimings[n].count += 1;
     });
-    const agentTimingData = Object.entries(agentTimings).map(([name, v]) => ({
-      agent: name,
-      avgMs: v.count > 0 ? Math.round(v.total / v.count) : 0,
-    }));
+    const agentTimingData = Object.entries(agentTimings)
+      .filter(([name]) => name !== 'Orchestrator')   // 👈 ADDED
+      .map(([name, v]) => ({
+        agent: name,
+        avgMs: v.count > 0 ? Math.round(v.total / v.count) : 0,
+      }));
 
     const outcomeCounts = {};
     workflows.forEach((w) => {

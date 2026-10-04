@@ -27,6 +27,7 @@ namespace Backend.Interfaces
         Task<LocalGuideResponseDto> GetGuideByIdAsync(Guid id);
         Task<LocalGuideResponseDto> UpdateGuideStatusAsync(Guid id, GuideStatus status);
         Task<GuideStatsDto> GetMyStatsAsync(Guid userId);
+        Task DeleteGuideAsync(Guid id);
     }
 
     public interface IExperienceService
