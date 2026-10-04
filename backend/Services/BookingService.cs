@@ -290,13 +290,19 @@ namespace Backend.Services
             for (int i = 0; i < 6; i++) code[i] = chars[rnd.Next(chars.Length)];
             return $"TC-{new string(code)}";
         }
-        // ---------- Admin Delete Booking ----------
-        public async Task DeleteAsync(Guid id)
+        // ---------- Delete Booking (Admin or Traveler Owner) ----------
+        public async Task DeleteAsync(Guid id, Guid? userId = null, string? role = null)
         {
             var booking = await _context.Bookings
                 .Include(b => b.Payment)
                 .FirstOrDefaultAsync(b => b.Id == id)
                 ?? throw new KeyNotFoundException("Booking not found.");
+
+            // If traveler, ensure they own this booking
+            if (role == "Traveler" && userId.HasValue && booking.TravelerId != userId.Value)
+            {
+                throw new UnauthorizedAccessException("Not your booking.");
+            }
 
             // Enforce business rule: Pending bookings cannot be deleted
             if (booking.Status == "Pending")
