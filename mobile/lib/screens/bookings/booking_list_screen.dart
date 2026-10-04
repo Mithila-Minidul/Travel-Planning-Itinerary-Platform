@@ -72,6 +72,59 @@ class _BookingListScreenState extends State<BookingListScreen> {
     }
   }
 
+  Future<void> _confirmDelete(dynamic b) async {
+    final bookingId = b['id']?.toString() ?? '';
+    final code = b['confirmationCode'] ?? '';
+    final title = b['tripTitle'] ?? 'this booking';
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Booking'),
+        content: Text(
+          'Are you sure you want to permanently delete booking "$code" for "$title"? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await BookingService.deleteBooking(bookingId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Booking deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        _load();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceFirst('Exception: ', '')),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -206,6 +259,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
     final guests = b['numberOfGuests'] ?? 1;
     final code = b['confirmationCode'] ?? '';
     final paymentStatus = b['paymentStatus']?.toString();
+    final canDelete = status == 'Confirmed' || status == 'Completed' || status == 'Cancelled';
 
     return Card(
       elevation: 1,
@@ -226,7 +280,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title + status
+              // Title + status + delete
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -259,6 +313,18 @@ class _BookingListScreenState extends State<BookingListScreen> {
                       ),
                     ),
                   ),
+                  if (canDelete) ...[
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          size: 20, color: Colors.red),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      splashRadius: 18,
+                      tooltip: 'Delete Booking',
+                      onPressed: () => _confirmDelete(b),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 6),
