@@ -162,10 +162,30 @@ namespace Backend.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        // ============================================================
+        // DELETE: api/Bookings/{id}   (Admin only)
+        // ============================================================
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                await _bookings.DeleteAsync(id);
+                return Ok(new { message = "Booking and related records deleted successfully." });
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+            catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while deleting the booking.", details = ex.Message });
+            }
+        }
     }
 
     public class CheckInByCodeDto
     {
         public string ConfirmationCode { get; set; } = "";
     }
+    
 }
