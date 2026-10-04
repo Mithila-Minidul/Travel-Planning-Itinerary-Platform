@@ -393,15 +393,25 @@ namespace Backend.Controllers
         }
         // ============================================================
         // DELETE: api/Trips/{id}
-        // ONLY Admin — Only Approved or Rejected trips can be deleted
+        // Admin or Traveler owner — Only Approved or Rejected trips
         // ============================================================
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin, Traveler")]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteTrip(Guid id)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
             var trip = await _context.Trips.FirstOrDefaultAsync(t => t.Id == id);
             if (trip == null) return NotFound(new { message = "Trip not found." });
 
+            // Ensure travelers can only delete their own trips
+            if (userRole == "Traveler" && trip.TravelerId.ToString() != userIdClaim)
+            {
+                return Forbid();
+            }
+
+            // Pending trips cannot be deleted
             if (trip.Status == "Pending")
             {
                 return BadRequest(new { message = "Pending trips cannot be deleted. Only Approved or Rejected trips can be deleted." });
