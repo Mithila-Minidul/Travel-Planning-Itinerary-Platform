@@ -124,11 +124,13 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+// 👇 CHANGE THIS SECTION
+// Remove the "if (app.Environment.IsDevelopment())" wrapper entirely, or just add the Swagger lines outside of it:
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Travel App Backend - SE3090 v1");
+});
 
 app.UseCors("AllowAll");
 
