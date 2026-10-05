@@ -83,6 +83,9 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+// 👇 ADD THIS LINE: Register the Health Check service
+builder.Services.AddHealthChecks();
+
 // 5. Configure CORS
 builder.Services.AddCors(options =>
 {
@@ -124,8 +127,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// 👇 CHANGE THIS SECTION
-// Remove the "if (app.Environment.IsDevelopment())" wrapper entirely, or just add the Swagger lines outside of it:
+// Enable Swagger in production
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -138,6 +140,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// 👇 ADD THIS LINE: Map the Health Check endpoint
+app.MapHealthChecks("/api/health");
 
 app.Run();
 public partial class Program { }
