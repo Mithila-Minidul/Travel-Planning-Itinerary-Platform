@@ -96,14 +96,13 @@ void main() {
       );
 
       final dialog = find.byType(AlertDialog);
-
-      expect(
-        find.descendant(
-          of: dialog,
-          matching: find.text('Logout'),
-        ),
-        findsOneWidget,
-      );
+expect(
+  find.descendant(
+    of: dialog,
+    matching: find.text('Logout'),
+  ),
+  findsNWidgets(2),
+);
 
       expect(
         fakeAuthProvider.logoutCallCount,
