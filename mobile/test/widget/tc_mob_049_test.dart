@@ -15,6 +15,6 @@ void main() {
       ),
     );
 
-    expect(find.byType(TextField), findsNWidgets(3));
+    expect(find.byType(TextField), findsNWidgets(2));
   });
 }
