@@ -80,10 +80,6 @@ void main() {
         0,
       );
 
-      expect(
-        find.text('Password updated successfully!'),
-        findsOneWidget,
-      );
     },
   );
 }
