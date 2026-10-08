@@ -5,11 +5,11 @@ import '../../lib/providers/auth_provider.dart';
 import '../../lib/screens/auth/login_screen.dart';
 
 void main() {
-  testWidgets('TC-MOB-056: LoginScreen UI check 10', (tester) async {
+  testWidgets('TC-MOB-057: LoginScreen UI check 11', (tester) async {
     await tester.pumpWidget(ChangeNotifierProvider<AuthProvider>(
       create: (_) => AuthProvider(),
       child: const MaterialApp(home: const LoginScreen()),
     ));
-    expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+    expect(find.byType(ElevatedButton), findsOneWidget);
   });
 }
