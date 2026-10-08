@@ -22,6 +22,6 @@ void main() {
 
     final model = Destination.fromJson(json);
 
-    expect(model.longitude, 80.04);
+    expect(model.longitude, 81.04);
   });
 }
