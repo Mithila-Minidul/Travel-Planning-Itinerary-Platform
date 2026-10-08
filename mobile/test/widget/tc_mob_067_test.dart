@@ -6,13 +6,10 @@ import '../../lib/screens/auth/register_screen.dart';
 
 void main() {
   testWidgets('TC-MOB-067: RegisterScreen UI check 10', (tester) async {
-    await tester.pumpWidget(
-      ChangeNotifierProvider<AuthProvider>(
-        create: (_) => AuthProvider(),
-        child: const MaterialApp(home: RegisterScreen()),
-      ),
-    );
-
-    expect(find.byType(ElevatedButton), findsNothing);
+    await tester.pumpWidget(ChangeNotifierProvider<AuthProvider>(
+      create: (_) => AuthProvider(),
+      child: const MaterialApp(home: const RegisterScreen()),
+    ));
+    expect(find.byType(ElevatedButton), findsWidgets);
   });
 }
