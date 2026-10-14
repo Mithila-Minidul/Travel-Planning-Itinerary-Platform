@@ -1,0 +1,199 @@
+{
+  "info": {
+    "name": "TripCraft AI End-to-End Workflow",
+    "_postman_id": "778899aa-bbcc-ddee-ff00-112233445566",
+    "description": "Complete cross-role E2E workflow: Traveler creates AI Trip -> AI executes -> Admin inspects logs in DB",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Verify Python AI Microservice Health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('AI Service is online and healthy', function () {",
+              "    pm.response.to.have.status(200);",
+              "    var data = pm.response.json();",
+              "    pm.expect(data.status).to.eql('healthy');",
+              "    pm.expect(data.agents).to.include('Planner Agent');",
+              "    pm.expect(data.agents).to.include('Budget Agent');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:8000/health"
+      }
+    },
+    {
+      "name": "2. Verify .NET Backend Health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Backend API is healthy', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:7000/api/health"
+      }
+    },
+    {
+      "name": "3. Register New Traveler to Obtain Traveler JWT",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Traveler registered with Role Traveler', function () {",
+              "    pm.response.to.have.status(201);",
+              "    var data = pm.response.json();",
+              "    pm.expect(data.token).to.be.a('string');",
+              "    pm.collectionVariables.set('TRAVELER_TOKEN', data.token);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Newman E2E Traveler\",\n  \"email\": \"traveler_{{$timestamp}}@test.com\",\n  \"password\": \"Traveler@123456\",\n  \"phoneNumber\": \"0771234567\",\n  \"role\": \"Traveler\"\n}"
+        },
+        "url": "http://localhost:7000/api/Auth/register"
+      }
+    },
+    {
+      "name": "4. Get Ella Destination ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Destination catalog loaded', function () {",
+              "    pm.response.to.have.status(200);",
+              "    var destinations = pm.response.json();",
+              "    pm.expect(destinations.length).to.be.above(0);",
+              "    var dest = destinations.find(d => d.name === 'Ella') || destinations[0];",
+              "    pm.collectionVariables.set('DEST_ID', dest.id);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:7000/api/Destinations"
+      }
+    },
+    {
+      "name": "5. Traveler Creates Trip (Triggers 4-Agent AI Subsystem)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('AI Itinerary generated and trip created', function () {",
+              "    pm.response.to.have.status(200);",
+              "    var data = pm.response.json();",
+              "    pm.expect(data.tripId).to.be.a('string');",
+              "    pm.expect(data.approvalStatus).to.eql('PENDING');",
+              "    pm.expect(data.stopsGenerated).to.be.above(0);",
+              "    pm.expect(data.executionLogEntries).to.be.above(0);",
+              "    pm.collectionVariables.set('TRIP_ID', data.tripId);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{TRAVELER_TOKEN}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"E2E Automated Ella Trip\",\n  \"objective\": \"Explore tea plantations and hiking trails\",\n  \"destinationId\": \"{{DEST_ID}}\",\n  \"startDate\": \"2026-11-10T00:00:00.000Z\",\n  \"endDate\": \"2026-11-12T00:00:00.000Z\",\n  \"budget\": 500,\n  \"interests\": \"Hiking,Tea & Plantation\",\n  \"travelGroup\": \"Couple\",\n  \"numberOfTravelers\": 2,\n  \"budgetTier\": \"Mid\",\n  \"travelPace\": \"Balanced\",\n  \"preferredTimes\": \"Morning,Afternoon\"\n}"
+        },
+        "url": "http://localhost:7000/api/Trips"
+      }
+    },
+    {
+      "name": "6. Admin Login to Inspect Workflow Audits",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Admin login successful', function () {",
+              "    pm.response.to.have.status(200);",
+              "    var data = pm.response.json();",
+              "    pm.collectionVariables.set('ADMIN_TOKEN', data.token);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@travelapp.com\",\n  \"password\": \"Admin@123456\"\n}"
+        },
+        "url": "http://localhost:7000/api/Auth/login"
+      }
+    },
+    {
+      "name": "7. Admin Verifies AI Execution Logs in PostgreSQL",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('AI Workflow audit logs persisted in DB', function () {",
+              "    pm.response.to.have.status(200);",
+              "    var data = pm.response.json();",
+              "    pm.expect(data.tripId).to.eql(pm.collectionVariables.get('TRIP_ID'));",
+              "    pm.expect(data.status).to.eql('PENDING');",
+              "    pm.expect(data.executionLogs.length).to.be.above(0);",
+              "    var agents = data.executionLogs.map(l => l.agentName);",
+              "    pm.expect(agents).to.include('Planner');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{ADMIN_TOKEN}}" }
+        ],
+        "url": "http://localhost:7000/api/AgentWorkflows/by-trip/{{TRIP_ID}}"
+      }
+    }
+  ],
+  "variable": [
+    { "key": "TRAVELER_TOKEN", "value": "" },
+    { "key": "ADMIN_TOKEN", "value": "" },
+    { "key": "DEST_ID", "value": "" },
+    { "key": "TRIP_ID", "value": "" }
+  ]
+}
