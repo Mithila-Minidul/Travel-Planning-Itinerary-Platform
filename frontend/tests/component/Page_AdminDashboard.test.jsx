@@ -1,0 +1,14 @@
+import React from 'react';
+import {describe,it,expect,vi} from 'vitest';
+import {render,waitFor} from '@testing-library/react';
+import {MemoryRouter,Routes,Route} from 'react-router-dom';
+const auth=vi.hoisted(()=>({user:{id:'u-1',fullName:'Test Admin',role:'Admin'},isAdmin:true,isAgent:false,isLocalGuide:false,isAuthenticated:true}));
+vi.mock('../../src/context/AuthContext',()=>({useAuth:()=>auth}));
+vi.mock('react-hot-toast',()=>({default:{success:vi.fn(),error:vi.fn(),loading:vi.fn(),dismiss:vi.fn()}}));
+vi.mock('../../src/api/adminUsers',()=>({adminUserAPI:{getRecentActivity: vi.fn().mockResolvedValue({data: []}), getTravelAgents: vi.fn().mockResolvedValue({data: []}), getTravelers: vi.fn().mockResolvedValue({data: []})}}));
+vi.mock('../../src/api/bookings',()=>({bookingAPI:{getAll: vi.fn().mockResolvedValue({data: []})}}));
+vi.mock('../../src/api/destinations',()=>({destinationAPI:{getAll: vi.fn().mockResolvedValue({data: []})}}));
+vi.mock('../../src/api/experiences',()=>({experienceAPI:{getForAdmin: vi.fn().mockResolvedValue({data: []}), getPending: vi.fn().mockResolvedValue({data: []})}}));
+vi.mock('../../src/api/guides',()=>({guideAPI:{getAll: vi.fn().mockResolvedValue({data: []})}}));
+import Page from '../../src/pages/AdminDashboard';
+describe('AdminDashboard page component - render smoke',()=>{it('mounts within its application route',async()=>{const {container}=render(<MemoryRouter initialEntries={['/test/123']}><Routes><Route path="/test/:id" element={<Page/>} /></Routes></MemoryRouter>);expect(container).toBeTruthy();await waitFor(()=>expect(container.querySelector('*')).not.toBeNull());});});
